@@ -320,7 +320,7 @@ export class CameraRig {
     this.apply();
   }
 
-  /** Whether the free area is wider than tall. */
+  /** Whether the room the interface leaves is wider than tall. */
   private get landscape(): boolean {
     const { top, right, bottom, left } = this.insets;
     return this.width - left - right >= this.height - top - bottom;
@@ -328,10 +328,13 @@ export class CameraRig {
 
   private apply(): void {
     const { top, right, bottom, left } = this.insets;
-    const freeW = Math.max(1, this.width - left - right);
+    // Across, the table stands in the middle of the screen, as wide as the room between the
+    // interface at the sides leaves it on both (the large cards on one side keep it clear of the
+    // other too); down, it centres between the top bar and the status along the bottom.
+    const side = Math.max(left, right);
+    const freeW = Math.max(1, this.width - 2 * side);
     const freeH = Math.max(1, this.height - top - bottom);
-    // Shift the picture so the table centres in the free area.
-    const shiftX = -(left - right) / 2;
+    const shiftX = 0;
     const shiftY = -(top - bottom) / 2;
 
     // The top view: straight down, the screen's up along the table from the player's end (or, for
