@@ -20,7 +20,7 @@ import type { Match, MatchEvent } from '../game/Match.ts';
 import type { Seat } from '../rules/types.ts';
 import { toScene } from '../table/frame.ts';
 import type { TableSpec } from '../table/spec.ts';
-import { contactShadowTexture } from './contactShadow.ts';
+import { contactShadowTexture, SHADOW_SPREAD } from './contactShadow.ts';
 import { malletMaterial, puckMaterial } from './surfaces.ts';
 
 /** Seconds a scored puck takes to slide into the slot and drop away. */
@@ -39,7 +39,6 @@ export class PiecesView {
     transparent: true,
     depthWrite: false,
     toneMapped: false,
-    opacity: 0.85,
   });
   private readonly shadows: Mesh[] = [];
   private readonly materials: Material[] = [];
@@ -90,10 +89,14 @@ export class PiecesView {
     });
     this.mallets = mallets;
     this.puck = disc;
-    for (const size of [this.spec.mallet.radius, this.spec.mallet.radius, this.spec.puck.radius]) {
+    for (const radius of [
+      this.spec.mallet.radius,
+      this.spec.mallet.radius,
+      this.spec.puck.radius,
+    ]) {
       const shadow = new Mesh(this.shadowGeometry, this.shadowMaterial);
       shadow.rotation.x = -Math.PI / 2;
-      shadow.scale.setScalar(size * 2.6);
+      shadow.scale.setScalar(radius * 2 * SHADOW_SPREAD);
       shadow.renderOrder = 2;
       this.shadows.push(shadow);
     }
