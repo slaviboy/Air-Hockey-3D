@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# Copyright (C) 2026 Stanislav Georgiev
+# https://github.com/slaviboy
+#
+# This file is part of Air Hockey 3D.
+#
+# Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version. See the LICENSE file for the full terms.
+#
+# Project commit rules (see CLAUDE.md): the right author, license headers on every source file,
+# no secrets, no naming of the reference product, nothing private (e-mails, local paths, image
+# metadata) and the library boundaries.
+
+expected_name="slaviboy"
+expected_email="slavi94slavi94@gmail.com"
+name=$(git var GIT_AUTHOR_IDENT | sed -E 's/ <.*//')
+email=$(git var GIT_AUTHOR_IDENT | sed -E 's/.*<(.*)>.*/\1/')
+if [ "$name" != "$expected_name" ] || [ "$email" != "$expected_email" ]; then
+  echo "pre-commit: commits must be authored by $expected_name <$expected_email> (got $name <$email>)." >&2
+  echo "pre-commit: run: git config user.name \"$expected_name\" && git config user.email \"$expected_email\"" >&2
+  exit 1
+fi
+
+npx vitest run tests/architecture --reporter=dot >/dev/null 2>&1 || {
+  echo "pre-commit: a license header, secret, naming, identity or boundary check failed; run: npx vitest run tests/architecture" >&2
+  exit 1
+}

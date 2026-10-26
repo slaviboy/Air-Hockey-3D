@@ -1,0 +1,58 @@
+/*
+ * Copyright (C) 2026 Stanislav Georgiev
+ * https://github.com/slaviboy
+ *
+ * This file is part of Air Hockey 3D.
+ *
+ * Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version. See the LICENSE file for the full terms.
+ */
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0f12;
+  color: #f2f2f4;
+  font-family:
+    Inter,
+    'SF Pro Text',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Phones keep the sizes set here instead of enlarging text on their own (iOS in landscape). The
+   controls draw their own pressed states in their own rounded shapes, so the browser's rectangular
+   tap flash is turned off. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+/* A dialog holds the focus itself on touch screens (see Dialog.ts); it needs no ring for that. */
+.dialog:focus {
+  outline: none;
+}
+
+/* The 3D scene fills the window. */
+.scene-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  outline: none;
+}

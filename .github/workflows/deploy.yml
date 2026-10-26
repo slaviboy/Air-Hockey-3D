@@ -1,0 +1,86 @@
+# Air Hockey 3D, built and published to GitHub Pages on every push to main.
+#
+# One setting on GitHub, made once: Settings -> Pages -> Source: GitHub Actions.
+# The site is then at https://<owner>.github.io/<repository>/.
+#
+# The build's URLs are relative (vite.config.ts sets base './'), so it serves
+# from the repository's subpath as well as from a domain's root. The visual
+# regression suite needs a real GPU and runs locally, not here.
+#
+# Nothing is published unless the audits pass: every commit in the history (authors, messages and
+# every version of every file) and the built site are checked for secrets, private data and the
+# reference's name (scripts/audit.ts).
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; one under way is let finish, as GitHub advises.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The whole history, for the audit.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Unit and architecture tests
+        run: npm test
+
+      - name: Audit the history
+        run: npm run audit
+
+      # Typechecks, then builds into dist/.
+      - name: Build
+        run: npm run build
+
+      - name: Audit the built site
+        run: npm run audit:dist
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

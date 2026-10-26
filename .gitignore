@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+*.blend1
+*.blend@
+.DS_Store
+.vite/
+*.log
+# Reference photographs gathered during research: local only, never published.
+docs/reference/
+__pycache__/
+*.pyc
+# Local editor and assistant settings: they hold paths of this computer.
+.idea/
+.vscode/
+.claude/settings.local.json
+blender/textures/

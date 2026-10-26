@@ -1,0 +1,334 @@
+/*
+ * Copyright (C) 2026 Stanislav Georgiev
+ * https://github.com/slaviboy
+ *
+ * This file is part of Air Hockey 3D.
+ *
+ * Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version. See the LICENSE file for the full terms.
+ */
+
+/*
+ * Online play: its dialogs (the warning before connecting, with a real checkbox rather than a
+ * switch for the age confirmation; the invitation link and its QR code), the connection's state
+ * under the cards, and video and voice on the cards: small enough to stay out of the table's way,
+ * or in 4:3 windows in a taller top bar on a phone held upright, or across the top of large cards
+ * (those layouts are in hockey.css).
+ */
+:root[data-ui='modern'] {
+  .online-dialog {
+    max-width: min(94vw, 52rem);
+  }
+
+  /* One column no wider than the dialog, whatever its contents would like. */
+  .online-dialog .dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.2rem;
+  }
+
+  .online-intro,
+  .online-reminder,
+  .online-status {
+    color: var(--m-muted);
+  }
+
+  .online-status:empty {
+    display: none;
+  }
+
+  .online-error {
+    color: var(--m-danger);
+  }
+
+  .online-warning {
+    padding: 1.2rem 1.4rem;
+    border: 1px solid var(--m-gold-line);
+    border-radius: 1.2rem;
+    background: var(--m-gold-soft);
+    color: var(--m-text);
+    font-size: 1.25rem;
+    line-height: 1.45;
+  }
+
+  .online-warning ul {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0.6rem 0 0;
+    padding-left: 1.8rem;
+  }
+
+  .online-warning-title {
+    color: var(--m-gold-hi);
+    font-weight: 700;
+  }
+
+  .online-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    color: var(--m-text);
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  /* A plain square checkbox here, never the switch the dialogs use elsewhere. */
+  .dialog .online-consent input[type='checkbox'] {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    margin: 0.1rem 0 0;
+    border: 1.5px solid var(--m-gold);
+    border-radius: 0.4rem;
+    background: transparent;
+    appearance: none;
+  }
+
+  .dialog .online-consent input[type='checkbox']::after {
+    content: '';
+    position: absolute;
+    top: 0.2rem;
+    left: 0.55rem;
+    width: 0.55rem;
+    height: 1rem;
+    border: solid var(--m-gold-ink);
+    border-width: 0 0.22rem 0.22rem 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    opacity: 0;
+    transform: rotate(45deg);
+  }
+
+  .dialog .online-consent input[type='checkbox']:checked {
+    background: var(--m-gold);
+  }
+
+  .dialog .online-consent input[type='checkbox']:checked::after {
+    opacity: 1;
+    transform: rotate(45deg);
+  }
+
+  .dialog .online-consent input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--m-gold-hi);
+    outline-offset: 2px;
+  }
+
+  .online-link {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .online-link input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .online-link .btn {
+    flex: none;
+    width: auto;
+  }
+
+  /* The link fields too: below 16px an iPhone zooms the page into them. */
+  @media (pointer: coarse) {
+    .online-dialog input[type='text'] {
+      font-size: max(16px, 1em);
+    }
+  }
+
+  /* The invitation as a QR code: dark on white, so any phone camera reads it. */
+  .online-qr {
+    display: grid;
+    justify-items: center;
+    gap: 0.6rem;
+    margin: 0;
+  }
+
+  /* The width is set in whole pixels per module by the dialog. */
+  .online-qr-code {
+    box-sizing: content-box;
+    overflow: hidden;
+    border-radius: 1.4rem;
+    background: #fff;
+    box-shadow:
+      0 0 0 1px var(--m-line-strong),
+      0 0.8rem 2.4rem rgba(0, 0, 0, 0.35);
+  }
+
+  .online-qr-code svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .online-qr figcaption {
+    color: var(--m-muted);
+    font-size: 1.2rem;
+    text-align: center;
+  }
+
+  /* The connection, under the left end of the top bar (UiRoot measures where it ends). */
+  .online-chip {
+    position: fixed;
+    top: calc(var(--hud-top, 7.4rem) + 0.6rem);
+    left: max(0.8rem, calc(50% - 48rem));
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    max-width: calc(50vw - 1.6rem);
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--m-line);
+    border-radius: 1.2rem;
+    background: var(--m-surface);
+    -webkit-backdrop-filter: var(--m-blur);
+    backdrop-filter: var(--m-blur);
+    color: var(--m-muted);
+    font: 500 1.15rem var(--m-font);
+    pointer-events: none;
+  }
+
+  /* With large cards (hockey.css), under the buttons in their corner. */
+  .hockey-ui.large-cards .online-chip {
+    left: auto;
+    right: var(--edge-right);
+  }
+
+  .hockey-ui.large-cards.left-handed .online-chip {
+    left: var(--edge-left);
+    right: auto;
+  }
+
+  .online-chip[hidden] {
+    display: none;
+  }
+
+  .online-chip-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .online-chip-dot {
+    flex: none;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--m-faint);
+  }
+
+  .online-chip[data-status='playing'] .online-chip-dot {
+    background: #7fd38a;
+  }
+
+  .online-chip[data-status='waiting'] .online-chip-dot,
+  .online-chip[data-status='connecting'] .online-chip-dot,
+  .online-chip[data-status='resyncing'] .online-chip-dot,
+  .online-chip[data-status='away'] .online-chip-dot {
+    background: var(--m-gold);
+    animation: m-pulse 1.2s ease-in-out infinite;
+  }
+
+  .online-chip[data-status='closed'] .online-chip-dot,
+  .online-chip[data-status='failed'] .online-chip-dot {
+    background: var(--m-danger);
+  }
+
+  /* Video and voice on the cards: the picture in the round avatar, the switches by the score. */
+  .card-media {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+  }
+
+  .card-media[hidden],
+  .card-media [hidden],
+  .m-avatar-video[hidden] {
+    display: none;
+  }
+
+  .m-avatar-video {
+    position: absolute;
+    inset: 0.35rem;
+    width: calc(100% - 0.7rem);
+    height: calc(100% - 0.7rem);
+    border-radius: 50%;
+    object-fit: cover;
+    background: #000;
+  }
+
+  .mirrored {
+    transform: scaleX(-1);
+  }
+
+  .player-card.video-on .player-initial {
+    display: none;
+  }
+
+  .m-media-btn.m-icon-btn {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.9rem;
+  }
+
+  .m-media-btn.m-icon-btn svg {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .m-media-btn[aria-pressed='true'] {
+    background: var(--m-gold-soft);
+    color: var(--m-gold-hi);
+  }
+
+  .m-media-btn.blocked {
+    color: var(--m-danger);
+  }
+
+  .card-media-silent {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    color: var(--m-faint);
+  }
+
+  .card-media-silent svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .online-chip {
+      font-size: 1.05rem;
+    }
+
+    .m-media-btn.m-icon-btn,
+    .card-media-silent {
+      width: 2.2rem;
+      height: 2.2rem;
+    }
+  }
+
+  /* Large cards on a phone held upright fill the width under the buttons: the chip goes beside
+   * the buttons, in the space they leave. */
+  @media (max-width: 640px) and (orientation: portrait) {
+    .hockey-ui.large-cards .online-chip {
+      top: calc(var(--edge-top) + 0.85rem);
+      left: var(--edge-left);
+      right: auto;
+      max-width: calc(100vw - 20rem);
+    }
+
+    .hockey-ui.large-cards.left-handed .online-chip {
+      left: auto;
+      right: var(--edge-right);
+    }
+
+    /* The menu bar fills that space: under the cards, then. */
+    .hockey-ui.large-cards.menu-bar .online-chip {
+      top: calc(var(--hud-top, 7.4rem) + 0.6rem);
+    }
+  }
+}

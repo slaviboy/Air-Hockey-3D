@@ -1,0 +1,48 @@
+{
+  "name": "air-hockey-3d",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A 3D air hockey game in the browser: a Blender-made table, real-time puck physics, a computer opponent, and online play with a friend over video.",
+  "license": "GPL-3.0-or-later",
+  "author": "Stanislav Georgiev (https://github.com/slaviboy)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && tsc --noEmit -p tsconfig.shared.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.shared.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:arch": "vitest run tests/architecture",
+    "test:e2e": "playwright test",
+    "audit": "node scripts/audit.ts",
+    "audit:dist": "node scripts/audit.ts dist",
+    "models": "node scripts/build-models.mjs"
+  },
+  "dependencies": {
+    "qrcode-generator": "2.0.4",
+    "three": "^0.186.1",
+    "trystero": "0.26.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.19.2",
+    "@types/pngjs": "^6.0.5",
+    "@types/three": "^0.186.0",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "jsqr": "1.4.0",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

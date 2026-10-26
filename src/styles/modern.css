@@ -1,0 +1,902 @@
+/*
+ * Copyright (C) 2026 Stanislav Georgiev
+ * https://github.com/slaviboy
+ *
+ * This file is part of Air Hockey 3D.
+ *
+ * Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version. See the LICENSE file for the full terms.
+ */
+
+/*
+ * The modern interface, shared with the author's chess game: floating graphite glass over the
+ * table, hairline borders, a champagne-gold accent and the system's own sans-serif. Sizes are in
+ * rem and follow the window, within limits that keep text readable on phones and calm on large
+ * screens. This file holds the design tokens and the common parts (buttons, tooltips, the menu
+ * bar and its menus, switches, segmented controls, dialogs and their fields); the game's own
+ * layout is in hockey.css.
+ */
+:root[data-ui='modern'] {
+  font-size: clamp(9px, calc(10px * var(--ui-scale)), 14px);
+  --m-font:
+    Inter, 'SF Pro Text', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --m-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --m-surface: rgba(19, 21, 26, 0.74);
+  --m-surface-strong: rgba(22, 24, 30, 0.9);
+  --m-solid: #16181d;
+  --m-raised: rgba(255, 255, 255, 0.05);
+  --m-hover: rgba(255, 255, 255, 0.08);
+  --m-press: rgba(255, 255, 255, 0.12);
+  --m-line: rgba(255, 255, 255, 0.08);
+  --m-line-strong: rgba(255, 255, 255, 0.14);
+  --m-text: #f2f2f4;
+  --m-muted: #a1a3aa;
+  --m-faint: #6c6f77;
+  --m-gold: #d6b36a;
+  --m-gold-hi: #ecd197;
+  --m-gold-ink: #1d1708;
+  --m-gold-soft: rgba(214, 179, 106, 0.16);
+  --m-gold-line: rgba(214, 179, 106, 0.55);
+  --m-danger: #e5736b;
+  --m-blur: blur(1.8rem) saturate(1.4);
+  --m-radius: 1.6rem;
+  --m-shadow: 0 1.2rem 3.2rem rgba(0, 0, 0, 0.32), 0 0.1rem 0.3rem rgba(0, 0, 0, 0.22);
+  --m-shadow-lg: 0 2rem 5rem rgba(0, 0, 0, 0.45), 0 0.2rem 0.6rem rgba(0, 0, 0, 0.3);
+  --m-ring: 0 0 0 0.2rem rgba(214, 179, 106, 0.55);
+
+  /* Every floating surface: frosted glass, or solid where the browser cannot blur. */
+  .m-topbar,
+  .m-card,
+  .m-dock,
+  .menu {
+    background: var(--m-surface);
+    -webkit-backdrop-filter: var(--m-blur);
+    backdrop-filter: var(--m-blur);
+    border: 1px solid var(--m-line);
+    box-shadow: var(--m-shadow);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .m-topbar,
+    .m-card,
+    .m-dock,
+    .menu {
+      background: var(--m-solid);
+    }
+  }
+
+  .m-ui {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    color: var(--m-text);
+    font: 400 1.3rem/1.45 var(--m-font);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  .m-ui > * {
+    pointer-events: auto;
+  }
+
+  .m-ui svg {
+    display: block;
+  }
+
+  .m-ui :focus-visible {
+    outline: none;
+    box-shadow: var(--m-ring);
+  }
+
+  /* Buttons. */
+  .m-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    height: 3.4rem;
+    padding: 0 1.5rem;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 1.1rem;
+    background: var(--m-raised);
+    color: var(--m-text);
+    font: 600 1.3rem var(--m-font);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      transform 0.15s;
+  }
+
+  .m-btn svg {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .m-btn:hover {
+    background: var(--m-hover);
+  }
+
+  .m-btn:active {
+    transform: translateY(1px);
+  }
+
+  .m-btn-primary {
+    border-color: rgba(255, 238, 196, 0.35);
+    background: linear-gradient(180deg, #e3c682, #c8a255);
+    color: var(--m-gold-ink);
+    box-shadow:
+      0 0.4rem 1.4rem rgba(214, 179, 106, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .m-btn-primary:hover {
+    background: linear-gradient(180deg, #ecd294, #d2ad62);
+  }
+
+  .m-icon-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    padding: 0;
+    border: 0;
+    border-radius: 1.1rem;
+    background: none;
+    color: var(--m-muted);
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .m-icon-btn svg {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .m-icon-btn:hover {
+    background: var(--m-hover);
+    color: var(--m-text);
+  }
+
+  .m-icon-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+    background: none;
+  }
+
+  /*
+   * Tooltips from data-tip, shown below by default: under a mouse, and on focus from the keyboard.
+   * Not on a touch screen, which keeps the last element touched hovered, so that its tip would
+   * stay up after the finger lifts. The box is drawn only once it has content.
+   */
+  [data-tip]::after {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 0.8rem);
+    transform: translateX(-50%);
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.7rem;
+    background: rgba(10, 11, 14, 0.92);
+    border: 1px solid var(--m-line);
+    color: var(--m-text);
+    font: 500 1.15rem var(--m-font);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 30;
+    animation: m-fade 0.12s 0.35s both;
+  }
+
+  [data-tip]:focus-visible::after {
+    content: attr(data-tip);
+  }
+
+  @media (hover: hover) {
+    [data-tip]:hover::after {
+      content: attr(data-tip);
+    }
+  }
+
+  /* Hints may be turned off for play (Settings); a tip still shows on focus from the keyboard. */
+  .hockey-ui.no-hints [data-tip]:hover:not(:focus-visible)::after {
+    content: none;
+  }
+
+  /* Near the right edge, tooltips line up with their button's right side. */
+  .m-topbar-end > [data-tip]:last-child:hover::after,
+  .m-topbar-end > [data-tip]:last-child:focus-visible::after {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  /* The game's name at the start of the menu bar. */
+  .m-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    height: 3rem;
+    padding: 0 1.2rem 0 0.4rem;
+    border-right: 1px solid var(--m-line);
+    flex: none;
+  }
+
+  .m-brand-mark svg {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+
+  .m-brand-name {
+    font: 600 1.95rem/1 var(--m-serif);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .m-brand-name small {
+    margin-left: 0.5rem;
+    color: var(--m-gold);
+    font: 700 1rem var(--m-font);
+    letter-spacing: 0.18em;
+    vertical-align: 0.45em;
+  }
+
+  /* The menu bar, as in the chess game. */
+  .menubar {
+    display: flex;
+    gap: 0.2rem;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .menubar-item {
+    flex: none;
+    height: 3.4rem;
+    padding: 0 1.2rem;
+    border: 0;
+    border-radius: 1.1rem;
+    background: none;
+    color: var(--m-muted);
+    font: 500 1.38rem var(--m-font);
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .menubar-item u {
+    text-decoration: none;
+  }
+
+  .menubar-item:focus-visible {
+    background: var(--m-hover);
+    color: var(--m-text);
+  }
+
+  /* Only where there is a real hover: a touch screen keeps :hover on the last item tapped, which
+     would leave a closed menu lit beside the open one. */
+  @media (hover: hover) {
+    .menubar-item:hover {
+      background: var(--m-hover);
+      color: var(--m-text);
+    }
+  }
+
+  .menubar-item.open {
+    background: var(--m-press);
+    color: var(--m-text);
+  }
+
+  /* Dropdown menus. MenuBar places them at the button's lower left corner. */
+  .menu {
+    position: fixed;
+    z-index: 40;
+    min-width: 25rem;
+    margin-top: 0.8rem;
+    padding: 0.6rem;
+    border-color: var(--m-line-strong);
+    border-radius: 1.4rem;
+    background: var(--m-surface-strong);
+    box-shadow: var(--m-shadow-lg);
+    color: var(--m-text);
+    font: 400 1.32rem var(--m-font);
+    user-select: none;
+    animation: m-menu-in 0.14s ease-out;
+  }
+
+  .menu.submenu {
+    min-width: 16rem;
+    margin: -0.3rem 0 0 0.8rem;
+  }
+
+  .menu.submenu.leftward {
+    margin-left: -0.8rem;
+  }
+
+  .menu.submenu.over {
+    margin: 0.2rem 0 0;
+  }
+
+  .menu-entry {
+    display: grid;
+    grid-template-columns: 2rem 1fr auto;
+    align-items: center;
+    gap: 0.8rem;
+    min-height: 3.2rem;
+    padding: 0 0.8rem 0 0.7rem;
+    border-radius: 0.9rem;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .menu-entry u {
+    text-decoration: none;
+  }
+
+  .menu-entry:hover,
+  .menu-entry:focus {
+    background: var(--m-hover);
+  }
+
+  .menu-entry[aria-disabled='true'] {
+    color: var(--m-faint);
+    cursor: default;
+  }
+
+  .menu-entry[aria-disabled='true']:hover {
+    background: none;
+  }
+
+  .menu-check {
+    display: grid;
+    place-items: center;
+    color: var(--m-gold);
+  }
+
+  .menu-check svg {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .menu-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--m-faint);
+  }
+
+  .menu-shortcut svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .menu-shortcut kbd {
+    padding: 0.1rem 0.6rem;
+    border: 1px solid var(--m-line);
+    border-radius: 0.6rem;
+    background: var(--m-raised);
+    color: var(--m-muted);
+    font: 500 1.1rem var(--m-font);
+  }
+
+  .menu-separator {
+    height: 1px;
+    margin: 0.5rem 0.8rem;
+    background: var(--m-line);
+  }
+
+  .m-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 2.8rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+  }
+
+  .m-switch {
+    position: relative;
+    flex: none;
+    width: 3.4rem;
+    height: 2rem;
+    margin: 0;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.14);
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .m-switch::after {
+    content: '';
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s;
+  }
+
+  .m-switch:checked {
+    background: var(--m-gold);
+  }
+
+  .m-switch:checked::after {
+    transform: translateX(1.4rem);
+  }
+
+  .m-segmented {
+    display: flex;
+    gap: 0.2rem;
+    padding: 0.3rem;
+    border: 1px solid var(--m-line);
+    border-radius: 1.1rem;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  .m-segmented-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .m-segment {
+    flex: 1;
+    min-width: 0;
+    height: 2.8rem;
+    padding: 0 0.3rem;
+    border: 0;
+    border-radius: 0.8rem;
+    background: none;
+    color: var(--m-muted);
+    font: 500 1.12rem var(--m-font);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .m-segment:hover {
+    color: var(--m-text);
+  }
+
+  .m-segment[aria-checked='true'] {
+    background: rgba(255, 255, 255, 0.13);
+    color: var(--m-text);
+    box-shadow:
+      0 0.1rem 0.3rem rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Dialogs: a frosted sheet with a plain title, a round close button and gold primary actions. */
+  /* The sheet stands in the middle while it fits, and at the top when it does not (its auto margins
+   * give way, where centring would push its title and close button off the screen), the backdrop
+   * scrolling to the rest. */
+  .dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: rgba(6, 7, 10, 0.42);
+    -webkit-backdrop-filter: blur(0.3rem);
+    backdrop-filter: blur(0.3rem);
+    animation: m-fade 0.18s ease-out;
+  }
+
+  .dialog {
+    position: relative;
+    box-sizing: border-box;
+    min-width: min(34rem, 92vw);
+    max-width: min(92vw, 50rem);
+    margin: auto;
+    /* Of the height the screen shows: a phone's vh counts it without the browser's bars. */
+    max-height: 88vh;
+    max-height: 88dvh;
+    overflow: auto;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 2rem;
+    background: var(--m-surface-strong);
+    -webkit-backdrop-filter: var(--m-blur);
+    backdrop-filter: var(--m-blur);
+    box-shadow: var(--m-shadow-lg);
+    color: var(--m-text);
+    font: 400 1.32rem/1.5 var(--m-font);
+    -webkit-font-smoothing: antialiased;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+    animation: m-sheet-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .dialog {
+      background: var(--m-solid);
+    }
+  }
+
+  .dialog .panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.6rem 1.4rem 0.6rem 2.2rem;
+    background: linear-gradient(var(--m-surface-strong) 70%, transparent);
+    font: 600 1.85rem/1.25 var(--m-font);
+    letter-spacing: -0.01em;
+  }
+
+  .dialog .panel-header .title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The close button keeps its "X" for screen readers but draws a thin cross. */
+  .dialog .panel-header button {
+    position: relative;
+    flex: none;
+    width: 3.2rem;
+    height: 3.2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--m-raised);
+    color: transparent;
+    font-size: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .dialog .panel-header button::before,
+  .dialog .panel-header button::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.4rem;
+    height: 0.16rem;
+    border-radius: 0.1rem;
+    background: var(--m-muted);
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+
+  .dialog .panel-header button::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+
+  .dialog .panel-header button:hover {
+    background: var(--m-hover);
+  }
+
+  .dialog .panel-header button:focus-visible {
+    outline: none;
+    box-shadow: var(--m-ring);
+  }
+
+  .dialog-body {
+    display: grid;
+    gap: 1.4rem;
+    padding: 1rem 2.2rem 2.2rem;
+  }
+
+  .dialog p {
+    margin: 0;
+  }
+
+  .dialog a {
+    color: var(--m-gold-hi);
+    text-decoration-color: var(--m-gold-line);
+    text-underline-offset: 0.2em;
+  }
+
+  .dialog :focus-visible {
+    outline: none;
+    box-shadow: var(--m-ring);
+  }
+
+  /* Buttons: quiet by default, gold for the main choice. */
+  .dialog .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 3.8rem;
+    padding: 0 1.8rem;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 1.2rem;
+    background: var(--m-raised);
+    color: var(--m-text);
+    font: 600 1.32rem var(--m-font);
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      transform 0.15s;
+  }
+
+  .dialog .btn:hover {
+    background: var(--m-hover);
+  }
+
+  .dialog .btn:active {
+    transform: translateY(1px);
+  }
+
+  .dialog .btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .dialog .btn[autofocus],
+  .dialog-actions > .btn:first-child,
+  .dialog-body > .choice-row > .btn:first-child {
+    border-color: rgba(255, 238, 196, 0.35);
+    background: linear-gradient(180deg, #e3c682, #c8a255);
+    color: var(--m-gold-ink);
+    box-shadow:
+      0 0.4rem 1.4rem rgba(214, 179, 106, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .dialog .btn[autofocus]:hover,
+  .dialog-actions > .btn:first-child:hover,
+  .dialog-body > .choice-row > .btn:first-child:hover {
+    background: linear-gradient(180deg, #ecd294, #d2ad62);
+  }
+
+  /* A choice that cannot be undone, and the safe way out beside it. */
+  .dialog .btn.btn-danger {
+    border-color: rgba(229, 115, 107, 0.5);
+    background: rgba(229, 115, 107, 0.16);
+    color: #ffc2bc;
+    box-shadow: none;
+  }
+
+  .dialog .btn.btn-danger:hover {
+    background: rgba(229, 115, 107, 0.26);
+  }
+
+  .dialog .btn.btn-quiet {
+    border-color: var(--m-line-strong);
+    background: var(--m-raised);
+    color: var(--m-text);
+    box-shadow: none;
+  }
+
+  .dialog .btn.btn-quiet:hover {
+    background: var(--m-hover);
+  }
+
+  /* The main choice sits at the right end of the row. */
+  .dialog-actions {
+    display: flex;
+    flex-direction: row-reverse;
+    flex-wrap: wrap-reverse;
+    justify-content: flex-start;
+    gap: 0.8rem;
+    margin-top: 0.4rem;
+  }
+
+  .dialog-body > .choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.8rem;
+  }
+
+  /* Form fields. */
+  .field {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .field[hidden] {
+    display: none;
+  }
+
+  .field > span,
+  .colour-row > span {
+    color: var(--m-muted);
+    font: 500 1.22rem var(--m-font);
+  }
+
+  .dialog select,
+  .dialog input[type='text'],
+  .dialog textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 3.8rem;
+    padding: 0 1.2rem;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 1.1rem;
+    background-color: rgba(0, 0, 0, 0.25);
+    color: var(--m-text);
+    font: 400 1.32rem var(--m-font);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  /* iPhones zoom the whole page into a field with smaller text, and never zoom back out. */
+  @media (pointer: coarse) {
+    .dialog select,
+    .dialog input[type='text'],
+    .dialog textarea {
+      font-size: max(16px, 1.32rem);
+    }
+  }
+
+  .dialog select {
+    padding-right: 3.6rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9.5l6 6 6-6' fill='none' stroke='%23a1a3aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.1rem center;
+    background-size: 1.6rem;
+    cursor: pointer;
+  }
+
+  .dialog select option {
+    background: #1c1e24;
+    color: var(--m-text);
+  }
+
+  .dialog textarea {
+    min-height: 13rem;
+    padding: 1rem 1.2rem;
+    font:
+      400 1.22rem/1.5 ui-monospace,
+      'SF Mono',
+      Menlo,
+      Consolas,
+      monospace;
+    resize: vertical;
+  }
+
+  .dialog select:focus-visible,
+  .dialog input[type='text']:focus-visible,
+  .dialog textarea:focus-visible {
+    border-color: var(--m-gold-line);
+  }
+
+  .form-error {
+    min-height: 1.4rem;
+    color: var(--m-danger);
+  }
+
+  /* Checkbox rows become switch rows: the label at the left, the switch at the right. */
+  .check {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    min-height: 3.2rem;
+    cursor: pointer;
+  }
+
+  .dialog input[type='checkbox'] {
+    position: relative;
+    flex: none;
+    width: 3.6rem;
+    height: 2.1rem;
+    margin: 0;
+    border-radius: 1.05rem;
+    background: rgba(255, 255, 255, 0.14);
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .dialog input[type='checkbox']::after {
+    content: '';
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s;
+  }
+
+  .dialog input[type='checkbox']:checked {
+    background: var(--m-gold);
+  }
+
+  .dialog input[type='checkbox']:checked::after {
+    transform: translateX(1.5rem);
+  }
+
+  .dialog input[type='range'] {
+    width: 100%;
+    accent-color: var(--m-gold);
+  }
+
+  .rating-field > span {
+    color: var(--m-text);
+    font-weight: 600;
+  }
+
+  .rating-scale {
+    display: flex;
+    justify-content: space-between;
+    color: var(--m-faint);
+    font-size: 1.1rem;
+  }
+
+  /* Section labels, and groups of settings as quiet panels. */
+  .m-heading {
+    color: var(--m-faint);
+    font: 700 1.05rem var(--m-font);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .settings-group {
+    display: grid;
+    gap: 0.4rem;
+    padding: 1.2rem 1.4rem;
+    border: 1px solid var(--m-line);
+    border-radius: 1.4rem;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .settings-group > .m-heading {
+    margin-bottom: 0.4rem;
+  }
+
+  .settings-group > .btn {
+    margin-top: 0.6rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+/* Keyframes cannot nest inside the scope; the m- prefix keeps them apart. */
+@keyframes m-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes m-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+@keyframes m-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes m-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.2rem) scale(0.98);
+  }
+}

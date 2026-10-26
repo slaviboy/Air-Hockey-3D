@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+/*
+ * Copyright (C) 2026 Stanislav Georgiev
+ * https://github.com/slaviboy
+ *
+ * This file is part of Air Hockey 3D.
+ *
+ * Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version. See the LICENSE file for the full terms.
+ */
+
+// Removes co-author trailers from every commit message (project rule, see CLAUDE.md).
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const file = process.argv[2];
+const message = readFileSync(file, 'utf8');
+const cleaned = `${message.replace(/^co-authored-by:.*(?:\r?\n|$)/gim, '').trimEnd()}\n`;
+if (cleaned !== message) writeFileSync(file, cleaned);
