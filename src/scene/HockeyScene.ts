@@ -47,6 +47,12 @@ export type Quality = 'high' | 'low';
 /** The dark room around the table. */
 const ROOM_COLOUR = new Color('#090b10');
 const LAMP_HEIGHT = 1.15;
+/** The three lamps: each this wide across the table and this long along it, at these places. */
+const LAMP = { width: 0.7, length: 0.5, intensity: 5, at: [-0.8, 0, 0.8] } as const;
+/** The device pixels per CSS pixel the high quality draws at, at most. */
+export const HIGH_PIXEL_RATIO = 2;
+/** A device too slow lowers its resolution by this much at a time, down to one. */
+const PIXEL_RATIO_STEP = 0.25;
 /** The floor, the playing surface's height below it (src/table/spec.ts). */
 const FLOOR = -0.8;
 
@@ -56,6 +62,8 @@ export class HockeyScene {
   /** The camera frames are drawn with; the camera rig decides which. */
   camera: Camera;
   private readonly shadowLight: DirectionalLight;
+  private readonly lamps = new Group();
+  private pixelRatio: number;
   private readonly updaters = new Set<FrameUpdater>();
   private readonly resizeListeners = new Set<(width: number, height: number) => void>();
   private readonly timer = new Timer();
@@ -63,13 +71,20 @@ export class HockeyScene {
   private readonly resizeObserver: ResizeObserver;
   private currentQuality: Quality;
 
+  /**
+   * @param maxPixelRatio the device pixels per CSS pixel the high quality draws at, at most (fewer
+   *   on a phone or a tablet, whose screens look as sharp with fewer)
+   */
   constructor(
     private readonly container: HTMLElement,
     camera: Camera,
     quality: Quality,
+    maxPixelRatio = HIGH_PIXEL_RATIO,
   ) {
     this.camera = camera;
     this.currentQuality = quality;
+    this.pixelRatio =
+      quality === 'high' ? Math.max(1, Math.min(window.devicePixelRatio, maxPixelRatio)) : 1;
     this.renderer = new WebGLRenderer({
       antialias: quality === 'high',
       powerPreference: 'high-performance',
@@ -79,7 +94,7 @@ export class HockeyScene {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = quality === 'high';
     this.renderer.shadowMap.type = PCFShadowMap;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === 'high' ? 2 : 1));
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.domElement.className = 'scene-canvas';
     container.appendChild(this.renderer.domElement);
 
@@ -94,15 +109,9 @@ export class HockeyScene {
     // remain.
     RectAreaLightUniformsLib.init();
     fixRectAreaLights();
-    const lamps = new Group();
-    lamps.name = 'lamps';
-    for (const z of [-0.8, 0, 0.8]) {
-      const lamp = new RectAreaLight('#f3f6ff', 5, 0.7, 0.5);
-      lamp.position.set(0, LAMP_HEIGHT, z);
-      lamp.lookAt(0, 0, z);
-      lamps.add(lamp);
-    }
-    this.scene.add(lamps);
+    this.lamps.name = 'lamps';
+    this.hangLamps(quality === 'high');
+    this.scene.add(this.lamps);
 
     this.scene.add(new HemisphereLight('#e6ecff', '#10131c', 0.45));
 
@@ -171,16 +180,24 @@ export class HockeyScene {
   }
 
   /**
-   * Drops to the low quality while running, for a device too slow for the high one: no shadows and
-   * one pixel per CSS pixel. (Antialiasing stays as the renderer was made.)
+   * One step down while running, for a device too slow for what it draws: first fewer pixels, a
+   * little at a time down to one per CSS pixel, which costs the look least; then the low quality,
+   * with no shadows and one lamp for three. (Antialiasing stays as the renderer was made.) Returns
+   * what was lowered, or null if nothing is left to lower.
    */
-  lowerQuality(): void {
-    if (this.currentQuality === 'low') return;
+  lowerQuality(): 'resolution' | 'quality' | null {
+    if (this.currentQuality === 'low') return null;
+    if (this.pixelRatio > 1) {
+      this.pixelRatio = Math.max(1, this.pixelRatio - PIXEL_RATIO_STEP);
+      this.renderer.setPixelRatio(this.pixelRatio);
+      this.resize();
+      return 'resolution';
+    }
     this.currentQuality = 'low';
     this.renderer.shadowMap.enabled = false;
     this.shadowLight.castShadow = false;
-    this.renderer.setPixelRatio(1);
-    // The materials were compiled with shadows; they must be compiled again without.
+    this.hangLamps(false);
+    // The materials were compiled with shadows and three lamps; they must be compiled again.
     this.scene.traverse((object) => {
       const material = (object as Mesh).material;
       for (const m of Array.isArray(material) ? material : material ? [material] : []) {
@@ -188,6 +205,29 @@ export class HockeyScene {
       }
     });
     this.resize();
+    return 'quality';
+  }
+
+  /**
+   * The lamps over the table: three in a row, or (for the low quality) one as long as the row,
+   * giving as much light. Each lamp is worked out for every pixel it lights, so three cost the
+   * most of anything in the room; one shows a single long shape in the gloss instead of three.
+   */
+  private hangLamps(three: boolean): void {
+    this.lamps.clear();
+    const { width, length, intensity, at } = LAMP;
+    const spans = three
+      ? at.map((z) => ({ z, length }))
+      : [{ z: 0, length: at[at.length - 1]! - at[0]! + length }];
+    // A lamp's light is its intensity times its area: the one shares out the three's.
+    const total = intensity * at.length * length;
+    for (const span of spans) {
+      const share = three ? intensity : total / span.length;
+      const lamp = new RectAreaLight('#f3f6ff', share, width, span.length);
+      lamp.position.set(0, LAMP_HEIGHT, span.z);
+      lamp.lookAt(0, 0, span.z);
+      this.lamps.add(lamp);
+    }
   }
 
   /** Renders a frame now, regardless of the dirty flag (used before screenshots). */

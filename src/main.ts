@@ -40,7 +40,13 @@ const quality =
         ? 'high'
         : chosen;
 
-const app = new App(root, import.meta.env.BASE_URL, settings, quality);
+// On the automatic setting, a phone or a tablet (a finger its pointer) draws the high quality at
+// 1.5 device pixels per CSS pixel rather than 2: its dense screen looks as sharp, and every pixel
+// fewer is less work for a small graphics chip, less heat and less battery.
+const touch = window.matchMedia('(pointer: coarse)').matches;
+const maxPixelRatio = chosen === 'auto' && touch ? 1.5 : undefined;
+
+const app = new App(root, import.meta.env.BASE_URL, settings, quality, maxPixelRatio);
 const ui = new UiRoot(app);
 installDebugHook(app);
 // Online play: an invitation in the address bar comes before the main menu (see UiRoot.menu).

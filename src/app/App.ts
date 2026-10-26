@@ -70,6 +70,7 @@ export class App {
     baseUrl: string,
     readonly settings: Store<Settings>,
     quality: Quality,
+    maxPixelRatio?: number,
   ) {
     const spec = TABLE;
     this.sound = new SoundManager(undefined, undefined, async (name) => {
@@ -78,7 +79,7 @@ export class App {
       return response.arrayBuffer();
     });
     this.rig = new CameraRig(() => this.scene?.requestRender());
-    this.scene = new HockeyScene(root, this.rig.camera, quality);
+    this.scene = new HockeyScene(root, this.rig.camera, quality, maxPixelRatio);
     this.tableView = new TableView(baseUrl, spec);
     this.pieces = new PiecesView(baseUrl, spec);
     this.zones = new ZoneView(spec);
@@ -250,8 +251,9 @@ export class App {
   }
 
   /**
-   * On the automatic setting, a device that animates at under 40 frames a second is given the low
-   * quality, once, and told why.
+   * On the automatic setting, a device that animates at under 40 frames a second draws at a lower
+   * resolution, a step at a time while it stays slow, and then at the low quality; the player is
+   * told once, when the shadows and the lamps go.
    */
   private watchFrames(dt: number, animating: boolean): void {
     if (this.settings.get().quality !== 'auto' || this.scene.quality === 'low') return;
@@ -259,8 +261,7 @@ export class App {
     if (!this.frames.slow) return;
     const fps = Math.round(1 / this.frames.median);
     this.frames.reset();
-    this.scene.lowerQuality();
-    this.onQualityLowered(fps);
+    if (this.scene.lowerQuality() === 'quality') this.onQualityLowered(fps);
   }
 
   /** Where a point of the table (its frame; z above the surface) appears, in client pixels. */

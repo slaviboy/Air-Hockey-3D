@@ -114,8 +114,9 @@ is static: no server is needed, online play included.
 - **The sounds** are Pool's billiard recordings, chosen to sound close; none was recorded at an air
   hockey table.
 - **Tested in Chromium.** The game was tested in Chromium on a desktop, in software rendering; no
-  real phone has been measured. A device that animates at under 40 frames a second lowers its
-  graphics by itself.
+  real phone has been measured. On the automatic setting a phone or a tablet draws at 1.5 device
+  pixels per CSS pixel rather than 2, and a device that animates at under 40 frames a second
+  lowers its resolution by itself, then its graphics.
 
 ## Licence
 
