@@ -27,12 +27,6 @@ import { malletMaterial, puckMaterial } from './surfaces.ts';
 const DROP_SECONDS = 0.45;
 /** Seconds a served puck takes to settle on its spot. */
 const SERVE_SECONDS = 0.3;
-/**
- * Where a shadow falls from under its piece, in the scene, per metre of the piece's height: as
- * from a lamp above the table and a little beyond and to the right of it, so the taller mallets'
- * shadows show as a crescent at their foot and the thin puck's hardly leaves it.
- */
-const SHADOW_FALL = { x: -0.12, z: 0.2 } as const;
 
 export class PiecesView {
   readonly group = new Group();
@@ -47,8 +41,6 @@ export class PiecesView {
     toneMapped: false,
   });
   private readonly shadows: Mesh[] = [];
-  /** Each shadow's offset from under its piece: the two mallets', then the puck's. */
-  private readonly falls: { x: number; z: number }[] = [];
   private readonly materials: Material[] = [];
   /** Seconds since the puck left play (into a goal or taken up), or -1 while it is in play. */
   private out = -1;
@@ -97,18 +89,16 @@ export class PiecesView {
     });
     this.mallets = mallets;
     this.puck = disc;
-    const { mallet: m, puck: p } = this.spec;
-    for (const [radius, height] of [
-      [m.radius, m.height],
-      [m.radius, m.height],
-      [p.radius, p.thickness],
-    ] as const) {
+    for (const radius of [
+      this.spec.mallet.radius,
+      this.spec.mallet.radius,
+      this.spec.puck.radius,
+    ]) {
       const shadow = new Mesh(this.shadowGeometry, this.shadowMaterial);
       shadow.rotation.x = -Math.PI / 2;
       shadow.scale.setScalar(radius * 2 * SHADOW_SPREAD);
       shadow.renderOrder = 2;
       this.shadows.push(shadow);
-      this.falls.push({ x: SHADOW_FALL.x * height, z: SHADOW_FALL.z * height });
     }
     this.group.add(mallets[0], mallets[1], disc, ...this.shadows);
   }
@@ -132,16 +122,14 @@ export class PiecesView {
       const p = match.malletAt(seat);
       toScene(p.x, p.y, 0, W, L, this.at);
       this.mallets[seat].position.set(this.at.x, this.at.y, this.at.z);
-      const fall = this.falls[seat]!;
-      this.shadows[seat]!.position.set(this.at.x + fall.x, 0.0007, this.at.z + fall.z);
+      this.shadows[seat]!.position.set(this.at.x, 0.0007, this.at.z);
     }
     const p = match.puckAt();
     toScene(p.x, p.y, 0, W, L, this.at);
     const puck = this.puck;
     const shadow = this.shadows[2]!;
     puck.position.set(this.at.x, 0, this.at.z);
-    const fall = this.falls[2]!;
-    shadow.position.set(this.at.x + fall.x, 0.0006, this.at.z + fall.z);
+    shadow.position.set(this.at.x, 0.0006, this.at.z);
     let animating: boolean;
     if (this.out >= 0) {
       this.out += dt;
