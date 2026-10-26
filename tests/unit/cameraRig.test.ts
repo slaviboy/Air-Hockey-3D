@@ -71,8 +71,25 @@ describe('the camera rig', () => {
       r.orbit(Math.PI / 5, 0);
       settle(r);
       if (keep) expect(frameHeight(r)).toBeCloseTo(start, 9);
-      else expect(frameHeight(r)).toBeGreaterThan(start * 1.2);
+      else expect(Math.abs(frameHeight(r) - start)).toBeGreaterThan(start * 0.05);
     }
+  });
+
+  it('stands the top view upright from the player’s end, or across for two sharing a screen', () => {
+    const { r } = rig(false);
+    r.setView('top', true);
+    settle(r);
+    // The screen's up runs along the table, away from seat 0's end (scene +Z) toward the far one.
+    expect(r.ortho.up.z).toBeCloseTo(-1, 9);
+    // From the other end, the other way.
+    r.lookFrom(1, true);
+    settle(r);
+    expect(r.ortho.up.z).toBeCloseTo(1, 9);
+    // Two players sharing a wide screen: the table across it.
+    r.lookFrom(0, true);
+    r.setAcross(true);
+    settle(r);
+    expect(Math.abs(r.ortho.up.x)).toBeCloseTo(1, 9);
   });
 
   it('hands over from the 3D to the top view at the same framing, with the zoom kept', () => {

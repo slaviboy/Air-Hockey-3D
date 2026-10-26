@@ -14,9 +14,10 @@
 //   3d   a perspective camera orbiting the table, by default from behind the player's goal, framed to
 //        fit the part of the screen the interface leaves free; the player may turn, tilt, zoom and
 //        pan it.
-//   top  an orthographic camera straight down, no perspective at all, the table lengthwise on a
-//        wide screen and upright on a tall one; the player may turn it about the vertical, zoom
-//        and pan it.
+//   top  an orthographic camera straight down, no perspective at all, the table upright with the
+//        player's own end at the bottom, as standing at a real table and looking down (with two
+//        players sharing a wide screen, across it instead, each at a side); the player may turn
+//        it about the vertical, zoom and pan it.
 //
 // Each view keeps its own turn, zoom and pan, so going to the top view and back finds the 3D view
 // where it was left. Switching is a dolly zoom: the perspective camera rises overhead while its
@@ -96,6 +97,8 @@ export class CameraRig {
    * angle, which zooms in and out as the view turns.
    */
   private keepZoom = false;
+  /** Whether the top view lays the table across a wide screen (two players sharing it). */
+  private across = false;
   private readonly corners: Vector3[] = [];
   private readonly forward = new Vector3();
   private readonly right = new Vector3();
@@ -307,7 +310,17 @@ export class CameraRig {
     return true;
   }
 
-  /** Whether the free area is wider than tall (then the top view lays the table lengthwise). */
+  /**
+   * Whether the top view lays the table across a wide screen, each end at a side, for two players
+   * sharing it; otherwise it stands upright from the player's end.
+   */
+  setAcross(on: boolean): void {
+    if (this.across === on) return;
+    this.across = on;
+    this.apply();
+  }
+
+  /** Whether the free area is wider than tall. */
   private get landscape(): boolean {
     const { top, right, bottom, left } = this.insets;
     return this.width - left - right >= this.height - top - bottom;
@@ -321,11 +334,11 @@ export class CameraRig {
     const shiftX = -(left - right) / 2;
     const shiftY = -(top - bottom) / 2;
 
-    // The top view: straight down, the screen's up along the table (portrait) or across, then
-    // turned as far as the player turned it.
+    // The top view: straight down, the screen's up along the table from the player's end (or, for
+    // two players on a wide screen, across it), then turned as far as the player turned it.
     const o3 = this.current['3d'];
     const oT = this.current.top;
-    const topBase = this.landscape ? 90 * DEG : 0;
+    const topBase = this.across && this.landscape ? 90 * DEG : 0;
     const topAzimuth = topBase + oT.azimuth;
     const t = smooth(this.blend);
     const azimuth = mixAngle(o3.azimuth, topAzimuth, t);

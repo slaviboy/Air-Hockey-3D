@@ -213,8 +213,10 @@ export class App {
     // Both players see where their mallets may go as the match begins.
     this.zones.flash();
     this.pieces.onEvent({ kind: 'served', seat: setup.firstServe });
-    // Each player looks from behind their own goal; two on one device share the top view.
+    // Each player looks from behind their own goal, the top view too; two on one device share the
+    // top view, with the table across the screen and each at a side.
     const own = local.length === 1 ? local[0]! : 0;
+    this.rig.setAcross(local.length === 2);
     this.rig.lookFrom(own === 1 ? 1 : 0, true);
     if (local.length === 2 && this.rig.view !== 'top') this.setView('top', true);
     this.scene.requestRender();
