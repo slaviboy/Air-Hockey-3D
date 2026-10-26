@@ -68,7 +68,7 @@ export const TABLE: TableSpec = {
   W: OUTLINE_WIDTH - 2 * RAIL_WIDTH,
   L: OUTLINE_LENGTH - 2 * RAIL_WIDTH,
   cornerRadius: CORNER_RADIUS,
-  goalWidth: 0.24,
+  goalWidth: 0.28,
   postRadius: 0.012,
   slotDepth: 0.07,
   railWidth: RAIL_WIDTH,
