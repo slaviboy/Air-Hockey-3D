@@ -11,11 +11,14 @@
 
 import './styles/base.css';
 import './styles/modern.css';
+import './styles/hockey.css';
+import './styles/sheet.css';
 import './styles/online.css';
 import { App } from './app/App.ts';
 import { installDebugHook } from './app/debugHook.ts';
 import { loadSettings, saveSettings } from './app/Settings.ts';
 import { Store } from './core/Store.ts';
+import { UiRoot } from './ui/UiRoot.ts';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('missing #app');
@@ -37,17 +40,14 @@ const quality =
         : chosen;
 
 const app = new App(root, import.meta.env.BASE_URL, settings, quality);
+const ui = new UiRoot(app);
 installDebugHook(app);
 app.ready
   .then(() => {
     root.dataset.ready = 'true';
-    const s = settings.get();
-    app.newMatch({
-      mode: 'computer',
-      target: s.target,
-      names: [s.name, 'Computer'],
-      firstServe: 0,
-    });
+    // ?menu=0 starts straight into a match against the computer (the tests that need no menu).
+    if (params.get('menu') === '0') void ui.play();
+    else void ui.menu();
   })
   .catch((error: Error) => {
     console.error(error);

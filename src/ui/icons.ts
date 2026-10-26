@@ -71,6 +71,22 @@ export const LINE_ICONS = {
   ),
   speaker: line('M4 9.5h3.5L12 6v12l-4.5-3.5H4zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11'),
   speakerOff: line('M4 9.5h3.5L12 6v12l-4.5-3.5H4zM16 9.5l5 5M21 9.5l-5 5'),
+  /** A big card between two edges: the slider of opponents (the chess game's). */
+  slider: line(
+    'M8.5 5h7a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 8v8M20 8v8',
+  ),
+  /** A grid of small cards: the compact view of opponents (the chess game's). */
+  grid: line('M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z'),
+  /** A screen on its stand: the computer as an opponent. */
+  computer: line(
+    'M4.5 5h15a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM9 19.5h6M12 15.5v4',
+  ),
+  /** A receiver put down: ending a call. */
+  hangUp: line(
+    'M3.4 13.6c4.8-4.3 12.4-4.3 17.2 0l-1.9 2.6-3.4-1.3v-2.3a9.4 9.4 0 0 0-6.6 0v2.3l-3.4 1.3z',
+  ),
+  /** The puck through the goal's slot. */
+  goal: line('M4 6h16M4 6v4M20 6v4M8.5 14.5a3.5 2 0 1 0 7 0a3.5 2 0 1 0-7 0zM12 3v3'),
 } as const;
 
 /** The game's mark: a mallet and a puck on the blue surface, either side of the centre line. */

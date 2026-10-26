@@ -23,11 +23,9 @@
 import type { Seat } from '../rules/types.ts';
 import {
   boundary,
-  centreLine,
   clampToArea,
   goalReached,
   malletArea,
-  neutralBand,
   type Area,
   type Boundary,
   type Point,
@@ -71,7 +69,8 @@ export interface World {
   readonly spec: TableSpec;
   /** The walls as the puck's centre meets them. */
   readonly walls: Boundary;
-  readonly areas: readonly [Area, Area];
+  /** Where each mallet's centre may go (the match's zones). */
+  areas: [Area, Area];
   readonly puck: Body;
   readonly mallets: readonly [Body, Body];
   /**
@@ -567,13 +566,16 @@ function slide(world: World, dt: number): void {
   const decay = dt === STEP ? STEP_DECAY : exp(-DAMPING * dt);
   puck.vx *= decay;
   puck.vy *= decay;
-  const middle = centreLine(spec);
-  // Where neither mallet reaches: a mallet's edge stops the band short of the line, so it touches
-  // no centre closer to the line than the band less the puck's radius (and a little more, so a
-  // puck only just within reach does not wait there either).
-  const unreached = neutralBand(spec) - spec.puck.radius + 0.006;
+  // Where neither mallet reaches: past the front of seat 0's zone by more than the two radii, and
+  // short of seat 1's (the band at the centre line, or a wider strip when the zones are short).
+  // A little is added to it, so a puck only just within reach does not wait there either.
+  const touch = spec.mallet.radius + spec.puck.radius;
+  const near = world.areas[0].y1 + touch - 0.006;
+  const far = world.areas[1].y0 - touch + 0.006;
   const speed = Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy);
-  if (speed < BAND_DRIFT_SPEED && Math.abs(puck.y - middle) < unreached) {
+  if (speed < BAND_DRIFT_SPEED && puck.y > near && puck.y < far) {
+    // Toward the nearer zone (at the centre line, toward the half it is in).
+    const middle = (near + far) / 2;
     puck.vy += (puck.y < middle ? -1 : 1) * BAND_DRIFT_ACCEL * dt;
     return;
   }

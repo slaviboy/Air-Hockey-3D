@@ -31,6 +31,7 @@ import { CameraRig, type Insets, type ViewMode } from '../scene/CameraRig.ts';
 import { HockeyScene, type Quality } from '../scene/HockeyScene.ts';
 import { PiecesView } from '../scene/PiecesView.ts';
 import { TableView } from '../scene/TableView.ts';
+import { ZoneView } from '../scene/ZoneView.ts';
 import { toScene } from '../table/frame.ts';
 import { halfOf, type Point } from '../table/geometry.ts';
 import { TABLE } from '../table/spec.ts';
@@ -41,6 +42,8 @@ export class App {
   readonly rig: CameraRig;
   readonly tableView: TableView;
   readonly pieces: PiecesView;
+  /** The mallets' zones on the surface, in green. */
+  readonly zones: ZoneView;
   readonly match: Match;
   readonly input: PaddleInput;
   readonly sound: SoundManager;
@@ -78,7 +81,8 @@ export class App {
     this.scene = new HockeyScene(root, this.rig.camera, quality);
     this.tableView = new TableView(baseUrl, spec);
     this.pieces = new PiecesView(baseUrl, spec);
-    this.scene.scene.add(this.tableView.group, this.pieces.group);
+    this.zones = new ZoneView(spec);
+    this.scene.scene.add(this.tableView.group, this.pieces.group, this.zones.group);
     const s = settings.get();
     this.match = new Match(
       { mode: 'computer', target: s.target, names: [s.name, 'Computer'], firstServe: 0 },
@@ -96,12 +100,13 @@ export class App {
       this.scene.camera = this.rig.camera;
       const playing = this.match.update(dt);
       const animating = this.pieces.update(this.match, dt);
+      const zones = this.zones.update(dt, this.match.world.areas);
       const { score } = this.match.current;
       this.tableView.setScore(score[0], score[1]);
       const puck = this.match.world.puck;
       this.sound.setAir(playing && this.match.world.live, Math.hypot(puck.vx, puck.vy));
       this.watchFrames(dt, moving || playing);
-      return moving || playing || animating;
+      return moving || playing || animating || zones;
     });
     this.input = new PaddleInput(this.scene.renderer.domElement, {
       seatFor: (point, touch) => this.seatFor(point, touch),
@@ -126,6 +131,8 @@ export class App {
       this.rig.setKeepZoom(next.keepZoom);
       this.sound.configure(next.sound, next.volume);
       this.tableView.setFinish(next.finish);
+      this.zones.setShown(next.showZones);
+      this.scene.requestRender();
     });
     this.rig.setView(s.view, true);
     this.ready = Promise.all([this.tableView.show(), this.pieces.load()]).then(() => {
@@ -203,6 +210,8 @@ export class App {
     if (local.length === 2) this.match.drivers[1] = this.arrows;
     this.match.start(setup);
     this.match.held = false;
+    // Both players see where their mallets may go as the match begins.
+    this.zones.flash();
     this.pieces.onEvent({ kind: 'served', seat: setup.firstServe });
     // Each player looks from behind their own goal; two on one device share the top view.
     const own = local.length === 1 ? local[0]! : 0;

@@ -31,7 +31,7 @@ import { createRng, range, type Rng } from '../core/rng.ts';
 import type { Driver, Match } from '../game/Match.ts';
 import { coast, type Body, type World } from '../physics/puck.ts';
 import type { Seat } from '../rules/types.ts';
-import { centreLine, clampToArea, malletHome, neutralBand, type Point } from '../table/geometry.ts';
+import { centreLine, clampToArea, malletHome, type Area, type Point } from '../table/geometry.ts';
 import type { TableSpec } from '../table/spec.ts';
 import type { Difficulty } from './difficulty.ts';
 
@@ -90,7 +90,7 @@ export class ComputerPlayer implements Driver {
     const puck = this.mirrorBody(match.world.puck, seat, spec);
     this.remember(now, puck);
     const mallet = flip(match.world.mallets[seat]);
-    const area = this.area(spec);
+    const area = this.area(match, seat);
     match.limits[seat] = {
       maxSpeed: this.striking
         ? Math.max(this.level.strike, this.level.maxSpeed)
@@ -123,16 +123,11 @@ export class ComputerPlayer implements Driver {
     return seat === 0 ? { ...b } : { x: b.x, y: spec.L - b.y, vx: b.vx, vy: -b.vy };
   }
 
-  /** Where this side's mallet may go, in its own frame. */
-  private area(spec: TableSpec) {
-    const m = spec.mallet.radius;
-    return {
-      x0: m,
-      x1: spec.W - m,
-      y0: m,
-      y1: centreLine(spec) - neutralBand(spec) - m,
-      r: Math.max(0, spec.cornerRadius - m),
-    };
+  /** Where this side's mallet may go (its zone in the match), in its own frame. */
+  private area(match: Match, seat: Seat): Area {
+    const a = match.world.areas[seat];
+    const L = match.spec.L;
+    return seat === 0 ? a : { ...a, y0: L - a.y1, y1: L - a.y0 };
   }
 
   private remember(t: number, puck: Body): void {
@@ -186,7 +181,7 @@ export class ComputerPlayer implements Driver {
     const level = this.level;
     const R = spec.puck.radius;
     const M = spec.mallet.radius;
-    const area = this.area(spec);
+    const area = this.area(match, seat);
     const speed = Math.hypot(seen.vx, seen.vy);
     const before = this.plan;
     this.decidedAt = match.time;

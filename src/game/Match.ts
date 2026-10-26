@@ -21,6 +21,8 @@ import { PLAYER_MALLET, STEP } from '../physics/params.ts';
 import { createWorld, step, type PhysicsEvent, type World } from '../physics/puck.ts';
 import {
   concede,
+  FETCH_DELAY,
+  FETCH_SPEED,
   FOUL_PAUSE,
   GOAL_PAUSE,
   newMatch,
@@ -31,7 +33,15 @@ import {
   type MatchState,
 } from '../rules/match.ts';
 import { other, type Seat } from '../rules/types.ts';
-import { halfOf, malletHome, serveSpot, type Point } from '../table/geometry.ts';
+import {
+  halfOf,
+  malletArea,
+  malletHome,
+  serveSpot,
+  type Area,
+  type Point,
+  type Reach,
+} from '../table/geometry.ts';
 import { TABLE, type TableSpec } from '../table/spec.ts';
 
 /** Against the computer, two players on this device, or a friend online. */
@@ -42,6 +52,8 @@ export interface MatchSetup {
   readonly target: number;
   readonly names: readonly [string, string];
   readonly firstServe: Seat;
+  /** How far up the table the mallets may go (both alike); the whole half when not given. */
+  readonly reach?: Reach;
 }
 
 /** What happens in a match, for the sounds, the scene and the interface. */
@@ -91,6 +103,13 @@ export class Match {
   private wait = 0;
   /** The half the puck is in, and for how long it has been there. */
   private possession: { seat: Seat; time: number } = { seat: 0, time: 0 };
+  /** Each seat's zone in this match, and its whole half (where a stranded puck may be fetched). */
+  private zones: [Area, Area] = [malletArea(TABLE, 0), malletArea(TABLE, 1)];
+  private halves: [Area, Area] = [malletArea(TABLE, 0), malletArea(TABLE, 1)];
+  /** Seconds the puck has lain where neither mallet may reach. */
+  private stranded = 0;
+  /** The seat out of its zone to fetch a stranded puck, or null. */
+  fetching: Seat | null = null;
 
   constructor(
     setup: MatchSetup,
@@ -107,6 +126,11 @@ export class Match {
   start(setup: MatchSetup = this.setup): void {
     this.setup = setup;
     this.state.set(newMatch(setup.target, setup.firstServe));
+    this.zones = [malletArea(this.spec, 0, this.reach), malletArea(this.spec, 1, this.reach)];
+    this.halves = [malletArea(this.spec, 0), malletArea(this.spec, 1)];
+    this.world.areas = [this.zones[0], this.zones[1]];
+    this.stranded = 0;
+    this.fetching = null;
     for (const seat of [0, 1] as const) {
       const home = malletHome(this.spec, seat);
       Object.assign(this.world.mallets[seat], { x: home.x, y: home.y, vx: 0, vy: 0 });
@@ -122,6 +146,11 @@ export class Match {
 
   get current(): MatchState {
     return this.state.get();
+  }
+
+  /** How far up the table the mallets may go in this match. */
+  get reach(): Reach {
+    return this.setup.reach ?? 'half';
   }
 
   /** Whether the puck is out of play for the pause after a goal or a foul. */
@@ -159,6 +188,7 @@ export class Match {
     this.remember();
     const { world, spec } = this;
     const waiting = this.waiting;
+    this.watchStranded();
     const to: [Point, Point] = [world.mallets[0], world.mallets[1]];
     for (const seat of [0, 1] as const) {
       // In the pause after a goal or a foul both mallets go home; otherwise where they are sent.
@@ -193,6 +223,30 @@ export class Match {
     if (after.winner !== null) this.onEvent({ kind: 'won', winner: after.winner });
   }
 
+  /**
+   * A puck at rest where neither mallet may reach (between short zones) is fetched, as a player
+   * at a real table would: after a moment, the player whose half it lies in may take their mallet
+   * up to the centre line, until the puck is struck or within reach again. The mallet then glides
+   * back into its zone (the step moves it there no faster than a hand).
+   */
+  private watchStranded(): void {
+    const { world, spec } = this;
+    const p = world.puck;
+    const touch = spec.mallet.radius + spec.puck.radius;
+    const beyond = p.y > this.zones[0].y1 + touch && p.y < this.zones[1].y0 - touch;
+    const slow = p.vx * p.vx + p.vy * p.vy < FETCH_SPEED * FETCH_SPEED;
+    // Struck, or come within reach: the zones hold again at once.
+    const still = world.live && this.current.phase === 'play' && beyond && slow;
+    this.stranded = still ? this.stranded + STEP : 0;
+    const seat = this.stranded >= FETCH_DELAY ? halfOf(spec, p.y) : null;
+    if (seat === this.fetching) return;
+    this.fetching = seat;
+    world.areas = [
+      seat === 0 ? this.halves[0] : this.zones[0],
+      seat === 1 ? this.halves[1] : this.zones[1],
+    ];
+  }
+
   /** The 7-second rule: a player keeping the puck in their half too long gives it up. */
   private watchPossession(): void {
     const half = halfOf(this.spec, this.world.puck.y);
@@ -218,7 +272,7 @@ export class Match {
   }
 
   private placePuck(seat: Seat): void {
-    const spot = serveSpot(this.spec, seat);
+    const spot = serveSpot(this.spec, seat, this.reach);
     Object.assign(this.world.puck, { x: spot.x, y: spot.y, vx: 0, vy: 0 });
     this.world.live = true;
     this.world.goal = null;

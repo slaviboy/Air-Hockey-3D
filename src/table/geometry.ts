@@ -132,16 +132,33 @@ export function neutralBand(spec: TableSpec): number {
   return spec.puck.radius + 0.002;
 }
 
-/** Where a seat's mallet centre may go: its own half, inside the rails, short of the band. */
-export function malletArea(spec: TableSpec, seat: Seat): Area {
+/**
+ * How far up the table a mallet may go, as a share of the table's length from its own end rail:
+ * the whole of its half (to the centre line, less the band: the standard game) or less, a match's
+ * choice that holds for both players. The share is where the mallet's front edge stops.
+ */
+export const REACHES = { half: 0.5, twoFifths: 0.4, third: 1 / 3, quarter: 0.25 } as const;
+export type Reach = keyof typeof REACHES;
+export const REACH_IDS = Object.keys(REACHES) as Reach[];
+
+export function isReach(value: unknown): value is Reach {
+  return typeof value === 'string' && value in REACHES;
+}
+
+/** How far from its own end rail a mallet's front edge may go in a match with this reach. */
+export function zoneFront(spec: TableSpec, reach: Reach = 'half'): number {
+  return Math.min(REACHES[reach] * spec.L, centreLine(spec) - neutralBand(spec));
+}
+
+/** Where a seat's mallet centre may go: inside the rails, from its own end to its zone's front. */
+export function malletArea(spec: TableSpec, seat: Seat, reach: Reach = 'half'): Area {
   const { W, L } = spec;
   const m = spec.mallet.radius;
-  const middle = centreLine(spec);
-  const band = neutralBand(spec);
+  const front = zoneFront(spec, reach);
   const r = Math.max(0, spec.cornerRadius - m);
   return seat === 0
-    ? { x0: m, x1: W - m, y0: m, y1: middle - band - m, r }
-    : { x0: m, x1: W - m, y0: middle + band + m, y1: L - m, r };
+    ? { x0: m, x1: W - m, y0: m, y1: front - m, r }
+    : { x0: m, x1: W - m, y0: L - front + m, y1: L - m, r };
 }
 
 /** The point of the area nearest to (x, y). */
@@ -160,9 +177,13 @@ export function clampToArea(area: Area, x: number, y: number): Point {
   return { x: kx + (dx / d) * area.r, y: ky + (dy / d) * area.r };
 }
 
-/** Where the puck is put down for a seat to serve: the middle of its half. */
-export function serveSpot(spec: TableSpec, seat: Seat): Point {
-  return { x: spec.W / 2, y: seat === 0 ? spec.L / 4 : (spec.L * 3) / 4 };
+/**
+ * Where the puck is put down for a seat to serve: the middle of its half, or nearer its end where
+ * the match's zones are short, so the server's mallet always reaches it.
+ */
+export function serveSpot(spec: TableSpec, seat: Seat, reach: Reach = 'half'): Point {
+  const y = Math.min(spec.L / 4, zoneFront(spec, reach) * 0.75);
+  return { x: spec.W / 2, y: seat === 0 ? y : spec.L - y };
 }
 
 /** Where a seat's mallet waits: in front of its goal. */

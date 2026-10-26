@@ -1,0 +1,298 @@
+/*
+ * Copyright (C) 2026 Stanislav Georgiev
+ * https://github.com/slaviboy
+ *
+ * This file is part of Air Hockey 3D.
+ *
+ * Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version. See the LICENSE file for the full terms.
+ */
+
+/*
+ * The New Game sheet, as in the chess game: the opponents by portrait in a slider of big cards or
+ * a compact grid, then the terms. The rules are the chess game's, for the sheet's parts this game
+ * keeps.
+ */
+
+:root[data-ui='modern'] {
+  .new-game-sheet {
+    width: min(94vw, 68rem);
+    max-width: min(94vw, 68rem);
+  }
+
+  .m-section {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .new-game-sheet .dialog-body {
+    gap: 1.2rem;
+  }
+
+  .m-section[hidden] {
+    display: none;
+  }
+
+  .dialog .m-segment {
+    height: 3.4rem;
+    font-size: 1.25rem;
+  }
+
+  .m-levels {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .m-level {
+    position: relative;
+    display: grid;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--m-line);
+    border-radius: 1.4rem;
+    background: var(--m-raised);
+    color: var(--m-text);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s,
+      transform 0.15s;
+  }
+
+  /* Big portraits framed on the face: the whole head shows, hair to chin. */
+  .m-level img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 6 / 5;
+    object-fit: cover;
+    object-position: 50% 28%;
+  }
+
+  /* The name and its line sit on the picture's lower edge, over a dark fade. */
+  .m-level-text {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+    padding: 2.6rem 1rem 0.8rem;
+    background: linear-gradient(transparent, rgba(10, 11, 14, 0.9) 60%);
+    font: 600 1.3rem/1.25 var(--m-font);
+    text-shadow: 0 1px 0.2rem rgba(0, 0, 0, 0.6);
+  }
+
+  .m-level-name {
+    overflow-wrap: anywhere;
+  }
+
+  .m-level-rating {
+    color: #c9cad0;
+    font: 500 1.1rem var(--m-font);
+  }
+
+  .m-level:hover {
+    border-color: var(--m-line-strong);
+    transform: translateY(-0.2rem);
+  }
+
+  .m-level[aria-checked='true'] {
+    border-color: var(--m-gold);
+    box-shadow:
+      0 0 0 1px var(--m-gold),
+      0 0.6rem 1.8rem rgba(214, 179, 106, 0.18);
+  }
+
+  .m-level[aria-checked='true'] .m-level-rating {
+    color: var(--m-gold-hi);
+  }
+
+  /* The Strength heading, with the Slider / Compact switch at its right. */
+  .m-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .m-view-toggle {
+    display: flex;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border: 1px solid var(--m-line);
+    border-radius: 1rem;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  .m-view-btn {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0.8rem;
+    background: none;
+    color: var(--m-faint);
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .m-view-btn svg {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .m-view-btn:hover {
+    color: var(--m-text);
+  }
+
+  .m-view-btn[aria-checked='true'] {
+    background: var(--m-hover);
+    color: var(--m-gold-hi);
+  }
+
+  .m-levels[hidden],
+  .m-carousel[hidden] {
+    display: none;
+  }
+
+  /*
+   * The slider: every card sits at the middle and moves by its distance from the chosen one
+   * (--d), so choosing another slides them all.
+   */
+  .m-carousel {
+    position: relative;
+  }
+
+  .m-carousel-stage {
+    container-type: inline-size;
+    overflow: hidden;
+    padding: 0.4rem 0;
+    touch-action: pan-y;
+  }
+
+  .m-carousel-track {
+    --w: min(14.5rem, 38cqw);
+    --step: calc(var(--w) * 0.9 + 1rem);
+    position: relative;
+    height: calc(var(--w) * 1.25);
+  }
+
+  .m-carousel-card {
+    --s: 0.8;
+    --pos: translateX(calc(-50% + var(--d) * var(--step))) scale(var(--s));
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--w);
+    transform: var(--pos);
+    transition:
+      transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 0.38s,
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .m-carousel-card:hover {
+    transform: var(--pos);
+  }
+
+  .m-carousel-card[data-pos='center'] {
+    --s: 1;
+    z-index: 2;
+  }
+
+  .m-carousel-card[data-pos='side'] {
+    z-index: 1;
+    opacity: 0.5;
+  }
+
+  .m-carousel-card[data-pos='side']:hover {
+    opacity: 0.75;
+  }
+
+  .m-carousel-card[data-pos='away'] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* The whole portrait, uncropped. */
+  .m-carousel .m-level img {
+    aspect-ratio: 4 / 5;
+    object-position: 50% 50%;
+  }
+
+  .m-carousel .m-level-text {
+    padding: 3.4rem 1.2rem 1rem;
+  }
+
+  .m-carousel .m-level-name {
+    font-size: 1.6rem;
+  }
+
+  .m-carousel .m-level-rating {
+    font-size: 1.2rem;
+  }
+
+  .m-carousel-arrow.m-icon-btn {
+    position: absolute;
+    top: 50%;
+    z-index: 3;
+    width: 4rem;
+    height: 4rem;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 50%;
+    background: rgba(16, 18, 22, 0.72);
+    -webkit-backdrop-filter: blur(0.8rem);
+    backdrop-filter: blur(0.8rem);
+    color: var(--m-text);
+    transform: translateY(-50%);
+  }
+
+  .m-carousel-arrow.m-icon-btn:hover {
+    background: rgba(30, 32, 38, 0.92);
+    color: var(--m-gold-hi);
+  }
+
+  .m-carousel-arrow.prev {
+    left: 0.2rem;
+  }
+
+  .m-carousel-arrow.next {
+    right: 0.2rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-carousel-card {
+      transition: opacity 0.2s;
+    }
+  }
+
+  @media (max-width: 760px) {
+    /* Narrow cards: taller pictures and a smaller caption, so the faces stay clear. */
+    .m-level img {
+      aspect-ratio: 1;
+      object-position: 50% 24%;
+    }
+
+    .m-level-text {
+      padding: 1.8rem 0.7rem 0.6rem;
+      font-size: 1.15rem;
+    }
+
+    .m-level-rating {
+      font-size: 1rem;
+    }
+
+    .name-pair {
+      grid-template-columns: 1fr;
+    }
+  }
+}

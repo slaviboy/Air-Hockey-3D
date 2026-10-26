@@ -19,6 +19,7 @@ import { DIFFICULTY_IDS, type DifficultyId } from '../ai/difficulty.ts';
 import { DEFAULT_TARGET, TARGETS } from '../rules/match.ts';
 import type { ViewMode } from '../scene/CameraRig.ts';
 import { FINISHES, type FinishName } from '../scene/surfaces.ts';
+import { isReach, type Reach } from '../table/geometry.ts';
 
 export type QualitySetting = 'auto' | 'high' | 'low';
 /** How the New Game sheet shows the computer's opponents: big cards in a slider, or a grid. */
@@ -54,6 +55,10 @@ export interface Settings {
   readonly difficulty: DifficultyId;
   /** Goals to win a match. */
   readonly target: number;
+  /** How far up the table the mallets may go in a new match, for both players. */
+  readonly reach: Reach;
+  /** The mallets' zones shown in green while playing. */
+  readonly showZones: boolean;
   readonly levelView: LevelView;
 }
 
@@ -72,6 +77,8 @@ export const DEFAULT_SETTINGS: Settings = {
   mode: 'computer',
   difficulty: 'medium',
   target: DEFAULT_TARGET,
+  reach: 'half',
+  showZones: true,
   levelView: 'slider',
 };
 
@@ -109,6 +116,8 @@ export function sanitize(value: unknown, d: Settings = DEFAULT_SETTINGS): Settin
     mode: oneOf(v.mode, ['computer', 'local'] as const, d.mode),
     difficulty: oneOf(v.difficulty, DIFFICULTY_IDS, d.difficulty),
     target: oneOf(v.target, TARGETS as readonly number[], d.target),
+    reach: isReach(v.reach) ? v.reach : d.reach,
+    showZones: flag(v.showZones, d.showZones),
     levelView: oneOf(v.levelView, ['slider', 'compact'] as const, d.levelView),
   };
 }

@@ -1,0 +1,1518 @@
+/*
+ * Copyright (C) 2026 Stanislav Georgiev
+ * https://github.com/slaviboy
+ *
+ * This file is part of Air Hockey 3D.
+ *
+ * Air Hockey 3D is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version. See the LICENSE file for the full terms.
+ */
+
+/*
+ * The game's own layout over the table (Pool's): the players' cards along the top (or large, beside
+ * the table), the status along the bottom, the banner after a goal and the notes; and the game's
+ * dialogs. The tokens and the common parts are in modern.css, the New Game sheet in sheet.css.
+ */
+:root {
+  --ui-scale: 1;
+}
+
+:root[data-ui='modern'] {
+  /* The top bar: two cards with the race between them, then the buttons. */
+  .hud-top {
+    position: fixed;
+    top: max(0.8rem, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: min(96rem, calc(100vw - 1.6rem));
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem;
+    border-radius: 2rem;
+  }
+
+  .player-card {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 1.2rem 0.5rem 0.5rem;
+    border-radius: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: none;
+    transition:
+      background 0.25s,
+      border-color 0.25s,
+      box-shadow 0.25s;
+  }
+
+  .player-card[hidden] {
+    display: none;
+  }
+
+  .player-card.seat-1 {
+    flex-direction: row-reverse;
+    padding: 0.5rem 0.5rem 0.5rem 1.2rem;
+    text-align: right;
+  }
+
+  .player-card.active {
+    border-color: var(--m-gold-line);
+    background: var(--m-gold-soft);
+    box-shadow:
+      0 0 0 1px rgba(214, 179, 106, 0.25),
+      0 0.6rem 2rem rgba(214, 179, 106, 0.12);
+  }
+
+  .player-avatar {
+    position: relative;
+    flex: none;
+    width: 4.4rem;
+    height: 4.4rem;
+  }
+
+  .player-avatar svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .player-avatar circle {
+    fill: none;
+    stroke-width: 3;
+  }
+
+  .player-avatar .ring-track {
+    stroke: rgba(255, 255, 255, 0.1);
+    fill: rgba(255, 255, 255, 0.06);
+  }
+
+  .player-avatar .ring-time {
+    stroke: var(--m-gold);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.1s linear;
+  }
+
+  .player-avatar .ring-time.off {
+    stroke: transparent;
+  }
+
+  .player-card.hurry .ring-time {
+    stroke: var(--m-danger);
+  }
+
+  .player-initial {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font: 700 1.7rem var(--m-font);
+    color: var(--m-text);
+  }
+
+  .player-card.active .player-initial {
+    color: var(--m-gold-hi);
+  }
+
+  .player-text {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .player-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 600 1.4rem/1.2 var(--m-font);
+  }
+
+  .player-balls {
+    display: flex;
+    gap: 0.15rem;
+    min-height: 1.6rem;
+    align-items: center;
+    color: var(--m-muted);
+    font-size: 1.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .player-card.seat-1 .player-balls {
+    justify-content: flex-end;
+  }
+
+  .player-tag[hidden] {
+    display: none;
+  }
+
+  /* The group and its count, and the race as pips, belong to the large card. */
+  .player-card:not(.large) .player-tag,
+  .player-card:not(.large) .player-pips {
+    display: none;
+  }
+
+  .player-score {
+    flex: none;
+    min-width: 2.4rem;
+    text-align: center;
+    font: 700 2.4rem/1 var(--m-font);
+    font-variant-numeric: tabular-nums;
+    color: var(--m-text);
+  }
+
+  .race {
+    flex: none;
+    padding: 0 0.6rem;
+    color: var(--m-muted);
+    font: 600 1.1rem var(--m-font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .hud-buttons {
+    flex: none;
+    display: flex;
+    gap: 0.2rem;
+  }
+
+  /* Along the bottom, in the middle: what is going on, in a pill. */
+  .hud-bottom {
+    position: fixed;
+    bottom: max(0.8rem, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: min(64rem, calc(100vw - 1.6rem));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    pointer-events: none;
+  }
+
+  .hud-bottom > * {
+    pointer-events: auto;
+  }
+
+  /* The status: the initial of the player it is about, what is going on, and Rematch. */
+  .status-pill {
+    box-sizing: border-box;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-height: 3.6rem;
+    padding: 0.35rem 1.4rem 0.35rem 0.35rem;
+    border-radius: 1.8rem;
+  }
+
+  .status-pill:has(.dock-action:not([hidden])) {
+    padding-right: 0.35rem;
+  }
+
+  .status-mark {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #3b3e47, #1b1d22 72%);
+    box-shadow: 0 0 0 1px var(--m-gold-line);
+    color: var(--m-gold-hi);
+    font: 600 1.4rem var(--m-serif);
+  }
+
+  .status {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 600 1.35rem var(--m-font);
+  }
+
+  .dock-action[hidden] {
+    display: none;
+  }
+
+  .dock-action {
+    flex: none;
+    height: 2.8rem;
+    border-radius: 1.4rem;
+  }
+
+  /*
+   * The guide behind the (i) button: the screen dimmed but for the parts of the interface, each
+   * ringed in gold, with a gold line from each to its label (GuideOverlay places them).
+   */
+  .guide {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    cursor: pointer;
+    animation: m-fade 0.18s ease-out;
+  }
+
+  .guide[hidden] {
+    display: none;
+  }
+
+  .guide-lines,
+  .guide-labels {
+    position: absolute;
+    inset: 0;
+  }
+
+  .guide-shade {
+    fill: rgba(6, 7, 10, 0.66);
+  }
+
+  .guide-ring {
+    fill: none;
+    stroke: var(--m-gold);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+
+  .guide-line {
+    stroke: var(--m-gold);
+    stroke-width: 1.5;
+  }
+
+  .guide-dot {
+    fill: var(--m-gold);
+  }
+
+  .guide-label {
+    position: absolute;
+    box-sizing: border-box;
+    max-width: min(24rem, 44vw);
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--m-gold-line);
+    border-radius: 1.1rem;
+    background: var(--m-surface-strong);
+    box-shadow: var(--m-shadow);
+    color: var(--m-text);
+    font: 400 1.2rem/1.4 var(--m-font);
+  }
+
+  .guide-title {
+    margin-bottom: 0.2rem;
+    color: var(--m-gold-hi);
+    font: 700 1rem var(--m-font);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* On a phone the labels are tighter, so that every one finds room. */
+  @media (max-width: 640px) {
+    .guide-label {
+      max-width: 46vw;
+      padding: 0.5rem 0.7rem;
+      font-size: 1.1rem;
+      line-height: 1.3;
+    }
+
+    .guide-title {
+      font-size: 0.95rem;
+    }
+  }
+
+  .guide-close {
+    position: absolute;
+    padding: 0.5rem 1.2rem;
+    border-radius: 1.4rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--m-muted);
+    font: 500 1.15rem var(--m-font);
+    white-space: nowrap;
+  }
+
+  /* Notes after a shot, under the cards (UiRoot measures where the top's parts end). */
+  .toasts {
+    position: fixed;
+    top: calc(var(--hud-top, 7.4rem) + 0.6rem);
+    left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    pointer-events: none;
+  }
+
+  .toast {
+    padding: 0.7rem 1.5rem;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 1.6rem;
+    background: var(--m-surface-strong);
+    -webkit-backdrop-filter: var(--m-blur);
+    backdrop-filter: var(--m-blur);
+    box-shadow: var(--m-shadow);
+    font: 600 1.3rem var(--m-font);
+    white-space: nowrap;
+    animation: m-fade 0.2s ease-out;
+    transition:
+      opacity 0.3s,
+      transform 0.3s;
+  }
+
+  .toast-foul {
+    border-color: rgba(229, 115, 107, 0.5);
+    color: #ffc2bc;
+  }
+
+  .toast-good {
+    border-color: var(--m-gold-line);
+    color: var(--m-gold-hi);
+  }
+
+  .toast.leaving {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+
+  /* Phones held upright: smaller cards, the dock across the bottom, a shorter power bar. */
+  @media (max-width: 640px) {
+    .hud-top {
+      gap: 0.4rem;
+      padding: 0.4rem;
+      border-radius: 1.6rem;
+    }
+
+    .player-card {
+      gap: 0.6rem;
+      padding: 0.4rem 0.8rem 0.4rem 0.4rem;
+    }
+
+    .player-card.seat-1 {
+      padding: 0.4rem 0.4rem 0.4rem 0.8rem;
+    }
+
+    .player-avatar {
+      width: 3.6rem;
+      height: 3.6rem;
+    }
+
+    .player-score {
+      font-size: 2rem;
+      min-width: 1.8rem;
+    }
+
+    .race {
+      display: none;
+    }
+
+    .hud-buttons .hud-reset,
+    .hud-buttons .hud-fullscreen {
+      display: none;
+    }
+
+    /* A tighter dock: the ball smaller, the spin and the step size not spelt out. */
+    .status {
+      font-size: 1.25rem;
+    }
+  }
+
+  /*
+   * Phones, upright or on their side: a dock no taller than its controls, and those as large as a
+   * finger needs. The parts go unnamed (the (i) guide names them), the step size unspelt, the
+   * spin's centring beside its words, and the cue's degrees under a shorter groove.
+   */
+  @media (max-width: 640px), (max-height: 500px) {
+    .hud-bottom {
+      bottom: max(0.5rem, env(safe-area-inset-bottom));
+      gap: 0.4rem;
+    }
+  }
+
+  /*
+   * The menu bar, when chosen: the game's name and the menus at the start of the top bar, in place
+   * of the menu button at its end. The name shows where the bar has the room, with large cards.
+   */
+  .hud-menus {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .hud-menus[hidden],
+  .hud-buttons .m-icon-btn[hidden] {
+    display: none;
+  }
+
+  .hockey-ui:not(.large-cards) .m-brand {
+    display: none;
+  }
+
+  /* New game, by the full screen button, comes with the menu bar; where the room is short (with
+   * small cards beside it, or on a phone) only its sign shows. */
+  .m-new-game {
+    height: 3.4rem;
+    margin: 0 0.2rem;
+  }
+
+  .hockey-ui:not(.menu-bar) .m-new-game {
+    display: none;
+  }
+
+  .hockey-ui.menu-bar:not(.large-cards) .m-new-game {
+    width: 3.4rem;
+    padding: 0;
+  }
+
+  .hockey-ui.menu-bar:not(.large-cards) .m-new-game span {
+    display: none;
+  }
+
+  /* Without the menu button, the full screen button ends the bar: its tip keeps on the screen. */
+  .hockey-ui.menu-bar .m-topbar-end > [data-tip]:nth-last-child(2):hover::after,
+  .hockey-ui.menu-bar .m-topbar-end > [data-tip]:nth-last-child(2):focus-visible::after {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  /*
+   * Large cards, for video calls. They stand on their own on the side away from the power bar, a
+   * camera's picture across the top of each like a call's; the top bar keeps the race and the
+   * buttons, in the corner over the power bar (or, with the menu bar, runs the whole width over
+   * the cards), the notes centre in the space left and the dock stays in the middle, the cards
+   * ending above it where it reaches under them. On a phone held upright they stand side by side
+   * under the top bar instead (the query is kept in step with PHONE_UPRIGHT in UiRoot.ts, which
+   * also sets --bar-bottom, where the top bar ends).
+   */
+  .hockey-ui {
+    --edge-top: max(0.8rem, env(safe-area-inset-top));
+    --edge-bottom: max(0.8rem, env(safe-area-inset-bottom));
+    --edge-left: max(0.8rem, env(safe-area-inset-left));
+    --edge-right: max(0.8rem, env(safe-area-inset-right));
+    --side: clamp(24rem, 24vw, 30rem);
+    /* Where the cards start. */
+    --players-top: var(--edge-top);
+    /* A large card's height without its picture, so that two pictures fit the screen's height. */
+    --card-info: 11.6rem;
+  }
+
+  .hockey-ui.large-cards .hud-top {
+    left: auto;
+    right: var(--edge-right);
+    width: auto;
+    transform: none;
+  }
+
+  .hockey-ui.large-cards.menu-bar {
+    --players-top: calc(var(--bar-bottom, 6rem) + 0.8rem);
+  }
+
+  /* With the menu bar the top bar runs the whole width over the cards, as in the chess game: the
+   * name and the menus at its start, the race, the buttons and New game at its end. */
+  .hockey-ui.large-cards.menu-bar .hud-top {
+    left: var(--edge-left);
+    right: var(--edge-right);
+  }
+
+  .hockey-ui.large-cards.menu-bar .race {
+    margin-left: auto;
+  }
+
+  .hud-players {
+    position: fixed;
+    top: var(--players-top);
+    left: var(--edge-left);
+    width: var(--side);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    pointer-events: none;
+  }
+
+  .hud-players[hidden] {
+    display: none;
+  }
+
+  /* The dock stays in the middle, narrowed alike on both sides so as not to reach under the
+   * cards (on a narrow screen it may, at its least width; the cards then end above it). */
+  .hockey-ui.large-cards .hud-bottom {
+    width: min(64rem, max(36rem, calc(100vw - 2 * (var(--edge-left) + var(--side) + 0.8rem))));
+  }
+
+  .hockey-ui.large-cards .toasts {
+    left: calc(50% + (var(--side) + 0.8rem) / 2);
+  }
+
+  /*
+   * The card, after the chess game's: the picture; the avatar with its clock's ring and group
+   * ball, the name, the group and its count as a tag, and the racks won in a box with the race as
+   * pips under them (gold on the player's turn, like a running clock); the switches for the camera
+   * and the sound by the tag; and the balls along a rail like a table's ball return. A gold edge
+   * marks the player to shoot.
+   */
+  .player-card.large {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'avatar name name score'
+      'avatar tag media score'
+      'balls balls balls balls';
+    align-items: center;
+    gap: 0.6rem 0.9rem;
+    padding: 1rem 1rem 1.1rem;
+    border-radius: var(--m-radius);
+    background: var(--m-surface);
+    box-shadow: var(--m-shadow);
+    text-align: left;
+    pointer-events: auto;
+  }
+
+  .player-card.large[hidden] {
+    display: none;
+  }
+
+  .player-card.large.video-on {
+    grid-template-areas:
+      'video video video video'
+      'avatar name name score'
+      'avatar tag tag score'
+      'balls balls balls balls';
+  }
+
+  /* With a picture, the switches lie over its lower corner, like a call's. */
+  .player-card.large.video-on .card-media {
+    grid-area: video;
+    align-self: end;
+    z-index: 1;
+    margin: 0.6rem;
+    padding: 0.2rem;
+    border-radius: 1.1rem;
+    background: rgba(10, 11, 14, 0.55);
+    -webkit-backdrop-filter: blur(0.6rem);
+    backdrop-filter: blur(0.6rem);
+  }
+
+  .player-card.large.video-on .m-media-btn.m-icon-btn:not([aria-pressed='true'], .blocked),
+  .player-card.large.video-on .card-media-silent {
+    color: var(--m-text);
+  }
+
+  .player-card.large.active {
+    background: linear-gradient(90deg, var(--m-gold-soft), transparent 80%), var(--m-surface);
+    box-shadow:
+      0 0 0 1px rgba(214, 179, 106, 0.25),
+      0 0.6rem 2rem rgba(214, 179, 106, 0.12),
+      var(--m-shadow);
+  }
+
+  .player-card.large.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.4rem;
+    bottom: 1.4rem;
+    width: 0.3rem;
+    border-radius: 0 0.3rem 0.3rem 0;
+    background: var(--m-gold);
+  }
+
+  .player-card.large .player-text {
+    display: contents;
+  }
+
+  .player-card.large .player-avatar {
+    grid-area: avatar;
+    width: 4.8rem;
+    height: 4.8rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #3b3e47, #1b1d22 72%);
+  }
+
+  .player-card.large .player-avatar .ring-track {
+    fill: none;
+  }
+
+  .player-card.large .player-initial {
+    font: 600 2.1rem var(--m-serif);
+  }
+
+  /* With a picture, the initial and the clock's ring stay beside the name. */
+  .player-card.large.video-on .player-initial {
+    display: grid;
+  }
+
+  .player-card.large .player-name {
+    grid-area: name;
+    align-self: end;
+    font-size: 1.7rem;
+  }
+
+  .player-card.large .player-tag {
+    grid-area: tag;
+    justify-self: start;
+    align-self: start;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.2rem 0.8rem;
+    border: 1px solid var(--m-line);
+    border-radius: 1rem;
+    background: var(--m-raised);
+    color: var(--m-muted);
+    font: 600 1.1rem/1.4 var(--m-font);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .player-card.large.active .player-tag {
+    border-color: var(--m-gold-line);
+    background: var(--m-gold-soft);
+    color: var(--m-gold-hi);
+  }
+
+  .player-card.large .player-score {
+    grid-area: score;
+    display: grid;
+    justify-items: center;
+    gap: 0.45rem;
+    min-width: 4.8rem;
+    padding: 0.55rem 0.7rem 0.6rem;
+    border: 1px solid var(--m-line);
+    border-radius: 1.1rem;
+    background: var(--m-raised);
+    font-size: 2.8rem;
+    transition:
+      background 0.2s,
+      color 0.2s;
+  }
+
+  .player-card.large.active .player-score {
+    border-color: transparent;
+    background: linear-gradient(180deg, #e3c682, #c8a255);
+    color: var(--m-gold-ink);
+    box-shadow: 0 0.3rem 1.2rem rgba(214, 179, 106, 0.28);
+  }
+
+  .player-pips {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  .pip {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .pip.won {
+    background: var(--m-gold);
+    box-shadow: 0 0 0.4rem rgba(214, 179, 106, 0.6);
+  }
+
+  .player-card.large.active .pip {
+    background: rgba(29, 23, 8, 0.22);
+  }
+
+  .player-card.large.active .pip.won {
+    background: var(--m-gold-ink);
+    box-shadow: none;
+  }
+
+  /* The ball return: a dark groove the length of the card, the balls resting in it. */
+  .player-card.large .player-balls {
+    grid-area: balls;
+    justify-content: space-between;
+    gap: 0.15rem;
+    min-height: 0;
+    padding: 0.35rem 0.6rem;
+    border-radius: 1.6rem;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.22));
+    box-shadow:
+      inset 0 0.15rem 0.4rem rgba(0, 0, 0, 0.6),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .player-card.large .player-balls.note {
+    display: none;
+  }
+
+  .player-card.large .card-media {
+    grid-area: media;
+    justify-self: end;
+  }
+
+  .player-card.large .m-media-btn.m-icon-btn,
+  .player-card.large .card-media-silent {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .player-card.large .m-media-btn.m-icon-btn svg,
+  .player-card.large .card-media-silent svg {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  /* As tall as a 4:3 picture, or less where two would not fit between the cards' top and their
+   * bottom: the dock's top where the dock reaches under them, else the screen's (UiRoot sets
+   * --players-bottom). */
+  .player-card.large .m-avatar-video {
+    grid-area: video;
+    position: static;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    max-height: calc(
+      (var(--players-bottom, calc(100vh - var(--edge-bottom))) - var(--players-top) - 1.6rem) / 2 -
+        var(--card-info) - 0.7rem
+    );
+    max-height: calc(
+      (var(--players-bottom, calc(100dvh - var(--edge-bottom))) - var(--players-top) - 1.6rem) / 2 -
+        var(--card-info) - 0.7rem
+    );
+    border-radius: 1.1rem;
+  }
+
+  /* Phones on their side, and other short screens: tighter cards leave the pictures more room. */
+  @media (max-height: 500px) {
+    .hockey-ui {
+      --card-info: 9rem;
+    }
+
+    .player-card.large .player-name {
+      font-size: 1.5rem;
+    }
+
+    .player-card.large .m-media-btn.m-icon-btn,
+    .player-card.large .card-media-silent {
+      width: 2.4rem;
+      height: 2.4rem;
+    }
+
+    .player-card.large .m-media-btn.m-icon-btn svg,
+    .player-card.large .card-media-silent svg {
+      width: 1.6rem;
+      height: 1.6rem;
+    }
+
+    .player-card.large {
+      gap: 0.45rem 0.8rem;
+      padding: 0.7rem;
+    }
+
+    .player-card.large .player-avatar {
+      width: 3.6rem;
+      height: 3.6rem;
+    }
+
+    .player-card.large .player-score {
+      gap: 0.3rem;
+      padding: 0.4rem 0.6rem 0.45rem;
+      font-size: 2.2rem;
+    }
+  }
+
+  /* Phones held upright: the two cards side by side under the top bar, the race in it (unless
+   * the menus take its room). */
+  @media (max-width: 640px) and (orientation: portrait) {
+    .hockey-ui {
+      --players-top: calc(var(--bar-bottom, 5rem) + 0.6rem);
+    }
+
+    .hud-players {
+      left: var(--edge-left);
+      right: var(--edge-right);
+      width: auto;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .hockey-ui.large-cards .race {
+      display: block;
+    }
+
+    .hockey-ui.large-cards.menu-bar .race {
+      display: none;
+    }
+
+    .hockey-ui.large-cards .hud-bottom {
+      width: min(64rem, calc(100vw - 1.6rem));
+    }
+
+    .hockey-ui.large-cards .toasts {
+      left: 50%;
+    }
+
+    /* Half the width each: the switches go to the end of the rail. */
+    .player-card.large {
+      flex: 1 1 0;
+      min-width: 0;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        'avatar name score'
+        'avatar tag score'
+        'balls balls media';
+      gap: 0.5rem 0.6rem;
+      padding: 0.7rem;
+    }
+
+    .player-card.large.video-on {
+      grid-template-areas:
+        'video video video'
+        'avatar name score'
+        'avatar tag score'
+        'balls balls balls';
+    }
+
+    .player-card.large .player-avatar {
+      width: 3.6rem;
+      height: 3.6rem;
+    }
+
+    .player-card.large .player-initial {
+      font-size: 1.6rem;
+    }
+
+    .player-card.large .player-name {
+      font-size: 1.45rem;
+    }
+
+    .player-card.large .player-tag {
+      padding: 0.1rem 0.5rem;
+      font-size: 1rem;
+    }
+
+    .player-card.large .player-score {
+      min-width: 0;
+      gap: 0.3rem;
+      padding: 0.4rem 0.5rem 0.45rem;
+      font-size: 2rem;
+    }
+
+    .player-card.large .player-balls {
+      gap: 0.1rem;
+      padding: 0.25rem 0.4rem;
+    }
+
+    .player-card.large .m-media-btn.m-icon-btn,
+    .player-card.large .card-media-silent {
+      width: 2.4rem;
+      height: 2.4rem;
+    }
+
+    .player-card.large .m-media-btn.m-icon-btn svg,
+    .player-card.large .card-media-silent svg {
+      width: 1.6rem;
+      height: 1.6rem;
+    }
+
+    .player-card.large .m-avatar-video {
+      max-height: 24vh;
+    }
+  }
+
+  /*
+   * A video call on a phone held upright, the cards in the top bar: the bar grows, and while either
+   * camera shows, each card's avatar is a window as wide as the card, 4:3 like a camera's picture,
+   * the picture cropped to fill it (the player's initial in it while their camera is off). The
+   * name, the racks and the balls lie over its foot on a dark band, the switches in its top corner,
+   * and the clock runs round its edge; the buttons stand in a column at the bar's end, leaving the
+   * windows its width. (Large cards live in .hud-players, so only small ones match.)
+   */
+  @media (max-width: 640px) and (orientation: portrait) {
+    .hud-top:has(.video-on) .hud-buttons {
+      flex-direction: column;
+    }
+
+    /* The window fills the card; the band and what it carries lie over its lower rows. */
+    .hud-top:has(.video-on) .player-card {
+      display: grid;
+      grid-template-columns: 0.4rem minmax(0, 1fr) auto 0.4rem;
+      grid-template-rows: 1fr auto auto 0.5rem;
+      grid-template-areas:
+        '. . . .'
+        '. name score .'
+        '. balls balls .'
+        '. . . .';
+      align-items: center;
+      gap: 0.1rem 0.4rem;
+      padding: 0.3rem;
+    }
+
+    .hud-top:has(.video-on) .player-card.seat-1 {
+      grid-template-columns: 0.4rem auto minmax(0, 1fr) 0.4rem;
+      grid-template-areas:
+        '. . . .'
+        '. score name .'
+        '. balls balls .'
+        '. . . .';
+    }
+
+    .hud-top:has(.video-on) .player-card::after {
+      content: '';
+      grid-area: 2 / 1 / -1 / -1;
+      align-self: stretch;
+      z-index: 1;
+      margin: -0.3rem 0.35rem 0.35rem;
+      border-radius: 0 0 0.9rem 0.9rem;
+      background: rgba(10, 11, 14, 0.6);
+      pointer-events: none;
+    }
+
+    .hud-top:has(.video-on) .player-text {
+      display: contents;
+    }
+
+    .hud-top:has(.video-on) .player-name,
+    .hud-top:has(.video-on) .player-score,
+    .hud-top:has(.video-on) .player-balls {
+      z-index: 2;
+      text-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.6);
+    }
+
+    .hud-top:has(.video-on) .player-name {
+      grid-area: name;
+      font-size: 1.3rem;
+    }
+
+    .hud-top:has(.video-on) .player-score {
+      grid-area: score;
+      min-width: 0;
+      font-size: 1.7rem;
+    }
+
+    .hud-top:has(.video-on) .player-balls {
+      grid-area: balls;
+      min-height: 0;
+    }
+
+    .hud-top:has(.video-on) .player-avatar {
+      --clock-color: var(--m-gold);
+      grid-area: 1 / 1 / -1 / -1;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 3;
+      border-radius: 1.2rem;
+      background: radial-gradient(circle at 34% 28%, #3b3e47, #1b1d22 72%);
+    }
+
+    .hud-top:has(.video-on) .player-card.hurry .player-avatar {
+      --clock-color: var(--m-danger);
+    }
+
+    /* The clock's ring, and the group's ball (the balls on the band show the group). */
+    .hud-top:has(.video-on) .player-avatar svg {
+      display: none;
+    }
+
+    /* The clock as the window's edge, gold as far round as the time left reaches. */
+    .hud-top:has(.video-on) .player-avatar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 0.25rem;
+      border-radius: inherit;
+      background: conic-gradient(var(--clock-color) calc(var(--clock, 0) * 1turn), transparent 0);
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask:
+        linear-gradient(#000 0 0) content-box exclude,
+        linear-gradient(#000 0 0);
+      pointer-events: none;
+    }
+
+    /* The initial in the middle of what the band leaves. */
+    .hud-top:has(.video-on) .player-initial {
+      padding-bottom: 3.6rem;
+      font: 600 3.6rem var(--m-serif);
+    }
+
+    .hud-top:has(.video-on) .m-avatar-video {
+      border-radius: 0.9rem;
+      object-position: 50% 40%;
+    }
+
+    .hud-top:has(.video-on) .card-media {
+      grid-area: 1 / 1 / 2 / -1;
+      align-self: start;
+      justify-self: start;
+      z-index: 2;
+      margin: 0.6rem;
+      padding: 0.1rem;
+      border-radius: 1rem;
+      background: rgba(10, 11, 14, 0.55);
+      -webkit-backdrop-filter: blur(0.6rem);
+      backdrop-filter: blur(0.6rem);
+    }
+
+    .hud-top:has(.video-on) .player-card.seat-1 .card-media {
+      justify-self: end;
+    }
+
+    .hud-top:has(.video-on) .m-media-btn.m-icon-btn:not([aria-pressed='true'], .blocked),
+    .hud-top:has(.video-on) .card-media-silent {
+      color: var(--m-text);
+    }
+  }
+
+  /* A phone with the menu bar: tighter menus, and with small cards a row of their own over them. */
+  @media (max-width: 640px) {
+    .menubar-item {
+      padding: 0 0.8rem;
+    }
+
+    .hockey-ui.menu-bar .m-new-game {
+      width: 3.4rem;
+      padding: 0;
+    }
+
+    .hockey-ui.menu-bar .m-new-game span {
+      display: none;
+    }
+
+    .hockey-ui.menu-bar:not(.large-cards) .hud-top {
+      flex-wrap: wrap;
+    }
+
+    .hockey-ui.menu-bar:not(.large-cards) .hud-menus {
+      flex: 1 0 100%;
+    }
+  }
+
+  /* Dialogs of the game. */
+  .main-menu {
+    width: min(46rem, 92vw);
+  }
+
+  /* The brand below names the menu; the header keeps only its close button. */
+  .main-menu .panel-header .title {
+    visibility: hidden;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+  }
+
+  .brand-mark svg {
+    width: 5.2rem;
+    height: 5.2rem;
+  }
+
+  .brand strong {
+    display: block;
+    font: 700 2.8rem/1.1 var(--m-font);
+    letter-spacing: -0.02em;
+  }
+
+  .brand small,
+  .mode-card small {
+    display: block;
+    color: var(--m-muted);
+    font: 400 1.2rem/1.4 var(--m-font);
+  }
+
+  .mode-list {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .mode-card {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.2rem 1.4rem;
+    border: 1px solid var(--m-line-strong);
+    border-radius: 1.6rem;
+    background: var(--m-raised);
+    color: var(--m-text);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
+  }
+
+  .mode-card:hover {
+    border-color: var(--m-gold-line);
+    background: var(--m-gold-soft);
+  }
+
+  .mode-card > svg {
+    width: 1.8rem;
+    height: 1.8rem;
+    color: var(--m-muted);
+  }
+
+  .mode-icon {
+    display: grid;
+    place-items: center;
+    width: 4.4rem;
+    height: 4.4rem;
+    border-radius: 1.3rem;
+    background: rgba(214, 179, 106, 0.14);
+    color: var(--m-gold-hi);
+  }
+
+  .mode-icon svg {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .mode-text {
+    flex: 1;
+  }
+
+  .mode-text strong {
+    font: 600 1.5rem/1.3 var(--m-font);
+  }
+
+  .menu-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .menu-links .btn {
+    flex: 1 1 auto;
+  }
+
+  .name-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .pause-menu {
+    width: min(34rem, 92vw);
+  }
+
+  .pause-list {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .pause-item {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    min-height: 4.4rem;
+    padding: 0 1.4rem;
+    border: 1px solid transparent;
+    border-radius: 1.3rem;
+    background: transparent;
+    color: var(--m-text);
+    font: 500 1.4rem var(--m-font);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pause-item svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--m-muted);
+  }
+
+  .pause-item:hover {
+    background: var(--m-hover);
+  }
+
+  .pause-item.primary {
+    border-color: var(--m-gold-line);
+    background: var(--m-gold-soft);
+    color: var(--m-gold-hi);
+  }
+
+  .pause-item.primary svg {
+    color: var(--m-gold-hi);
+  }
+
+  .dialog-lead {
+    color: var(--m-muted);
+  }
+
+  .result-dialog {
+    text-align: center;
+  }
+
+  .result-trophy {
+    color: var(--m-gold-hi);
+  }
+
+  .result-trophy svg {
+    width: 5.2rem;
+    height: 5.2rem;
+    margin: 0 auto;
+  }
+
+  .result-detail {
+    color: var(--m-muted);
+  }
+
+  .result-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    font: 600 1.4rem var(--m-font);
+  }
+
+  .result-score strong {
+    font: 700 3.6rem/1 var(--m-font);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result-score em {
+    color: var(--m-faint);
+    font-style: normal;
+  }
+
+  .shortcuts {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.25rem;
+  }
+
+  .shortcuts td {
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--m-line);
+    vertical-align: top;
+  }
+
+  .shortcuts tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .shortcuts td:first-child {
+    width: 45%;
+    padding-right: 1.2rem;
+    color: var(--m-gold-hi);
+    font-weight: 600;
+  }
+
+  .rules-dialog ul,
+  .about-dialog ul.credits {
+    display: grid;
+    gap: 0.7rem;
+    margin: 0;
+    padding-left: 1.8rem;
+  }
+
+  .about-dialog {
+    width: min(48rem, 92vw);
+  }
+
+  /* The gold "3D" by the game's name, as in the top bar. */
+  .brand-3d {
+    margin-left: 0.6rem;
+    color: var(--m-gold);
+    font: 700 1.2rem var(--m-font);
+    letter-spacing: 0.18em;
+    vertical-align: 0.9em;
+  }
+
+  .fine {
+    color: var(--m-faint);
+    font-size: 1.15rem;
+  }
+
+  .volume {
+    width: 100%;
+    accent-color: var(--m-gold);
+  }
+
+  .load-error {
+    position: fixed;
+    inset: auto 1.6rem 1.6rem;
+    padding: 1.2rem 1.6rem;
+    border-radius: 1.2rem;
+    background: rgba(120, 30, 30, 0.9);
+  }
+}
+
+/* Air hockey's own parts: the computer's portrait, the banner after a goal, the zones' map. */
+:root[data-ui='modern'] {
+  /* The computer's portrait fills the round avatar, inside its ring. */
+  .player-portrait {
+    position: absolute;
+    inset: 0.35rem;
+    width: calc(100% - 0.7rem);
+    height: calc(100% - 0.7rem);
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  .player-portrait[hidden],
+  .player-initial[hidden] {
+    display: none;
+  }
+
+  .player-card.video-on .player-portrait {
+    display: none;
+  }
+
+  /* The banner after a goal: large, gold, over the middle of the table, gone in the pause. */
+  .goal-banner {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    z-index: 30;
+    display: grid;
+    justify-items: center;
+    gap: 0.4rem;
+    padding: 1.4rem 3.2rem 1.6rem;
+    border: 1px solid var(--m-gold-line);
+    border-radius: 2.4rem;
+    background: rgba(12, 13, 17, 0.72);
+    -webkit-backdrop-filter: var(--m-blur);
+    backdrop-filter: var(--m-blur);
+    box-shadow: var(--m-shadow-lg);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .goal-banner[hidden] {
+    display: none;
+  }
+
+  .goal-banner.showing {
+    animation: goal-in 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .goal-title {
+    color: var(--m-gold-hi);
+    font: 800 5.6rem/1 var(--m-font);
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 2.4rem rgba(214, 179, 106, 0.45);
+  }
+
+  .goal-banner[data-kind='theirs'] .goal-title {
+    color: #f2f2f4;
+    text-shadow: 0 0 2rem rgba(255, 255, 255, 0.18);
+  }
+
+  .goal-detail {
+    color: var(--m-text);
+    font: 600 1.6rem var(--m-font);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 640px) {
+    .goal-banner {
+      padding: 1rem 2rem 1.2rem;
+    }
+
+    .goal-title {
+      font-size: 3.8rem;
+    }
+
+    .goal-detail {
+      font-size: 1.3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .goal-banner.showing {
+      animation: none;
+    }
+  }
+
+  /* The mallets' zones: the choice over a map of the table, the zones washed in green. */
+  .zone-picker {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .zone-map-frame {
+    display: grid;
+    place-items: center;
+  }
+
+  .zone-map {
+    width: min(100%, 22rem);
+    height: auto;
+  }
+
+  .zone-rail {
+    fill: #c9ccd1;
+    stroke: rgba(0, 0, 0, 0.35);
+  }
+
+  .zone-field {
+    fill: #1f5ade;
+  }
+
+  .zone-fill {
+    fill: rgba(47, 224, 121, 0.4);
+  }
+
+  .zone-edge {
+    stroke: #2fe079;
+    stroke-width: 2.5;
+  }
+
+  .zone-centre {
+    stroke: #f3f6ff;
+    stroke-width: 1.4;
+  }
+
+  .zone-goal {
+    fill: #0c0d10;
+  }
+
+  .zone-mallet {
+    stroke: rgba(0, 0, 0, 0.4);
+    stroke-width: 0.8;
+  }
+
+  .zone-mallet.seat-0 {
+    fill: #d21f2b;
+  }
+
+  .zone-mallet.seat-1 {
+    fill: #17a05a;
+  }
+}
+
+/* A goal: the banner springs in, holds, and fades away before the serve. */
+@keyframes goal-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+
+  24% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

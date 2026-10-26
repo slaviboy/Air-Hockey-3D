@@ -29,6 +29,14 @@ export const FOUL_PAUSE = 1.2;
 export const POSSESSION_LIMIT = 7;
 
 /**
+ * A puck slower than this (m/s) where neither mallet may reach, for longer than FETCH_DELAY
+ * seconds, may be fetched: the player whose half it lies in may take their mallet out of their
+ * zone, up to the centre line, until it is struck or within reach again.
+ */
+export const FETCH_SPEED = 0.25;
+export const FETCH_DELAY = 0.5;
+
+/**
  * `play` while the puck is live; `goal` and `foul` for the pause after one, until the serve;
  * `over` once someone has won.
  */
