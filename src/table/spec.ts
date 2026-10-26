@@ -34,7 +34,7 @@ export interface TableSpec {
   readonly railWidth: number;
   /** The rail's top above the playing surface (the height of its inner acrylic wall). */
   readonly railHeight: number;
-  /** The outer corners of the top rail. */
+  /** The outer corners of the top rail: the field's corners, the rail's width further out. */
   readonly outerCornerRadius: number;
   /** The playing surface above the floor. */
   readonly surfaceHeight: number;
@@ -62,17 +62,18 @@ const INCH = 0.0254;
 export const OUTLINE_LENGTH = 2.49;
 export const OUTLINE_WIDTH = 1.3;
 const RAIL_WIDTH = 0.1;
+const CORNER_RADIUS = 0.06;
 
 export const TABLE: TableSpec = {
   W: OUTLINE_WIDTH - 2 * RAIL_WIDTH,
   L: OUTLINE_LENGTH - 2 * RAIL_WIDTH,
-  cornerRadius: 0.06,
+  cornerRadius: CORNER_RADIUS,
   goalWidth: 0.24,
   postRadius: 0.012,
   slotDepth: 0.07,
   railWidth: RAIL_WIDTH,
   railHeight: 0.028,
-  outerCornerRadius: 0.15,
+  outerCornerRadius: CORNER_RADIUS + RAIL_WIDTH,
   surfaceHeight: 0.8,
   puck: { radius: (3.25 * INCH) / 2, thickness: (3 / 16) * INCH },
   mallet: { radius: 2 * INCH, height: 0.072, knobRadius: 0.021 },
