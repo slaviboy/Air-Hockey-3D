@@ -13,22 +13,21 @@
 // opened it. Nothing in between referees, so each side referees what it receives: the guard checks
 // size, rate and shape, this session checks who may say what and when, and the game (through its
 // GamePort) checks the play itself. A player who breaks the rules forfeits on the honest side, and
-// is disconnected. The session knows no game: 8-ball plugs in through src/game/GamePort.ts.
+// is disconnected. The session knows no game: air hockey plugs in through src/game/HockeyPort.ts.
 //
 // Identity: when the guest first arrives the host gives it a random token over the encrypted
 // connection. Whoever comes back later must show the same token, in both directions, so a stranger
 // holding a leaked link can neither take the guest's seat nor pose as the host.
 //
-// Keeping in step: each side simulates every shot and compares its table's fingerprint with the
-// shooter's. When they differ, play stops on both sides and the host's table is sent over (a
-// sync); the guest takes it. More than MAX_DESYNCS times in one session and the session ends, with
-// nobody losing. A guest that comes back gets the host's table the same way, and sends its own last
-// action again if the host never heard it.
+// Keeping in step: the game tells when what it hears cannot follow from its own match (in air
+// hockey, a goal counted differently). Then play stops on both sides and the host's match is sent
+// over (a sync); the guest takes it. More than MAX_DESYNCS times in one session and the session
+// ends, with nobody losing. A guest that comes back gets the host's match the same way.
 
 import { Store } from '../core/Store.ts';
 import type { LinkPort } from './LinkPort.ts';
 import { OnlineMedia, type MediaOptions } from './OnlineMedia.ts';
-import { PeerGuard, type Verdict } from './PeerGuard.ts';
+import { PeerGuard, type GuardLimits, type Verdict } from './PeerGuard.ts';
 import {
   PROTOCOL_VERSION,
   SESSION_TYPES,
@@ -42,7 +41,7 @@ import {
   type WireMessage,
 } from './protocol.ts';
 
-/** The most network delay allowed for on the other player's shot clock. */
+/** The most network delay allowed for on the other player's clocks. */
 export const MAX_LAG_ALLOWANCE_MS = 1000;
 /** How long a guest looks for the game before giving up. */
 export const CONNECT_TIMEOUT_MS = 45_000;
@@ -108,10 +107,10 @@ export type ForfeitReason =
   /** The other player left, or stayed away too long. */
   | 'abandoned'
   /** The other player's app sent play the rules do not allow. */
-  | 'invalid-shot'
+  | 'invalid-play'
   /** The other player's app sent something that is not a message of the game. */
   | 'invalid-data'
-  /** The other player's app did not keep its own shot clock. */
+  /** The other player's app did not keep its own clock (a serve, the puck held too long). */
   | 'stalled';
 
 export type SessionEvent =
@@ -135,7 +134,7 @@ export type Receipt =
   | { readonly kind: 'shown' }
   /** The rules do not allow it: the other side forfeits. */
   | { readonly kind: 'violation'; readonly detail: string }
-  /** It was played, and this side's table came out different from the sender's after shot n. */
+  /** It was played, and this side's table came out different from the sender's at point n. */
   | { readonly kind: 'desync'; readonly n: number };
 
 /** Why a table is being restored: from this tab's storage, a rejoin, or after a desync. */
@@ -154,7 +153,7 @@ export interface GameListener<M> {
   /** A message the local player's play produced; `changesMatch` is false for a mere preview. */
   send(message: M, changesMatch: boolean): void;
   /**
-   * The other player's app broke a rule no single message shows (a shot clock it did not keep).
+   * The other player's app broke a rule no single message shows (a clock it did not keep).
    * The session acts on it after the messages already received, and only if `stillTrue` (when
    * given) says it still holds then: the awaited message may have been on its way.
    */
@@ -230,6 +229,8 @@ interface CommonOptions<M extends WireMessage, S> {
   readonly storage?: SessionStorage<M, S>;
   /** Camera and microphone access; tests pass stand-ins. */
   readonly media?: MediaOptions;
+  /** How much the other side may send: a game that streams its play needs more than the default. */
+  readonly limits?: GuardLimits;
 }
 
 export interface HostOptions<M extends WireMessage, S> extends CommonOptions<M, S> {
@@ -284,7 +285,7 @@ export class OnlineSession<M extends WireMessage, S extends object> {
   private expectSync = false;
   /** A guest waiting for the host's table after the two disagreed. */
   private awaitingSync = false;
-  /** A host that found the tables different, waiting for the guest to stop (its shot index). */
+  /** A host that found the tables different, waiting for the guest to stop (its point n). */
   private pendingDesync: number | null = null;
   /** A guest's own table from this tab's storage, taken once the host has set up the match. */
   private savedState: M | null;
@@ -331,7 +332,7 @@ export class OnlineSession<M extends WireMessage, S extends object> {
     this.timers = options.timers ?? browserTimers;
     this.storage = options.storage ?? null;
     const codec = options.codec;
-    this.guard = new PeerGuard((data) => parseMessage(data, codec), options.now);
+    this.guard = new PeerGuard((data) => parseMessage(data, codec), options.now, options.limits);
     this.token = saved?.token ?? null;
     this.terms = saved?.terms ?? null;
     this.savedState = saved?.state ?? null;
@@ -643,7 +644,7 @@ export class OnlineSession<M extends WireMessage, S extends object> {
       case 'shown':
         return;
       case 'violation':
-        return this.violation('invalid-shot', receipt.detail);
+        return this.violation('invalid-play', receipt.detail);
       case 'desync':
         return this.onMismatch(receipt.n);
     }
@@ -679,7 +680,7 @@ export class OnlineSession<M extends WireMessage, S extends object> {
     this.save();
   }
 
-  /** This side's table came out different from the other side's after shot n. */
+  /** This side's table came out different from the other side's at point n. */
   private async onMismatch(n: number): Promise<void> {
     this.save();
     void this.link.send({ t: 'desync', n } as WireMessage);
@@ -692,7 +693,7 @@ export class OnlineSession<M extends WireMessage, S extends object> {
     this.watchStep();
   }
 
-  /** The other side found the tables different after shot n (or, to a host, has stopped). */
+  /** The other side found the tables different at point n (or, to a host, has stopped). */
   private async onDesync(n: number): Promise<void> {
     if (!this.started) return;
     if (this.role === 'host') {

@@ -18,6 +18,9 @@
 // say about them: a camera shows only while live pictures come in, and a microphone counts as on
 // while live sound does. At most one sound and one picture are taken from them; anything more is
 // stopped and ignored.
+//
+// Hanging up ends the call on this device while the match goes on: both devices stop, and the
+// other player is no longer seen or heard here. Turning either device on again calls back.
 
 import { Store } from '../core/Store.ts';
 import type { LinkPort } from './LinkPort.ts';
@@ -36,6 +39,8 @@ export interface MediaState {
   readonly friendAudio: MediaStream | null;
   /** The other player's sound is muted on this device. */
   readonly speakerMuted: boolean;
+  /** This player hung up: nothing of the other player's is shown or played here. */
+  readonly hungUp: boolean;
   /** Why a device could not start, for the player. */
   readonly error: string | null;
 }
@@ -74,6 +79,7 @@ export class OnlineMedia {
     friendVideo: null,
     friendAudio: null,
     speakerMuted: false,
+    hungUp: false,
     error: null,
   });
   private readonly getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>;
@@ -84,6 +90,8 @@ export class OnlineMedia {
   private readonly shown = new Map<MediaStreamTrack, MediaStream>();
   private outgoing: MediaStream | null = null;
   private stopped = false;
+  /** Hang-ups so far: a device still starting when the player hangs up is stopped once it starts. */
+  private hangUps = 0;
 
   constructor(
     private readonly link: LinkPort,
@@ -105,6 +113,24 @@ export class OnlineMedia {
   /** Mutes or unmutes the other player's sound on this device only. */
   toggleSpeaker(): void {
     this.patch({ speakerMuted: !this.state.get().speakerMuted });
+  }
+
+  /**
+   * Ends the call on this device: the microphone and camera stop (their lights go out), and the
+   * other player is no longer shown or heard here. The match goes on; a device turned on calls back.
+   */
+  hangUp(): void {
+    if (this.stopped) return;
+    const { mic, cam } = this.state.get();
+    this.hangUps++;
+    for (const kind of ['audio', 'video'] as const) this.release(kind);
+    this.patch({
+      mic: mic === 'blocked' ? 'blocked' : 'off',
+      cam: cam === 'blocked' ? 'blocked' : 'off',
+      hungUp: true,
+    });
+    this.showRemote();
+    if (mic === 'on' || cam === 'on') this.report();
   }
 
   /** A track from the other player (the link passes only the partner's). */
@@ -156,7 +182,10 @@ export class OnlineMedia {
       this.report();
       return;
     }
-    this.patch({ [device]: 'starting', error: null } as Partial<MediaState>);
+    // Turning a device on calls back after a hang-up.
+    this.patch({ [device]: 'starting', error: null, hungUp: false } as Partial<MediaState>);
+    this.showRemote();
+    const hangUps = this.hangUps;
     let track: MediaStreamTrack | undefined;
     try {
       const stream = await this.getUserMedia(CONSTRAINTS[kind]);
@@ -173,7 +202,7 @@ export class OnlineMedia {
       } as Partial<MediaState>);
       return;
     }
-    if (!track || this.stopped) {
+    if (!track || this.stopped || this.hangUps !== hangUps) {
       track?.stop();
       this.patch({ [device]: 'off' } as Partial<MediaState>);
       return;
@@ -201,8 +230,9 @@ export class OnlineMedia {
   }
 
   private showRemote(): void {
+    const hungUp = this.state.get().hungUp;
     const stream = (track: MediaStreamTrack | null) => {
-      if (!live(track)) return null;
+      if (hungUp || !live(track)) return null;
       let shown = this.shown.get(track);
       if (!shown) {
         shown = this.createStream([track]);

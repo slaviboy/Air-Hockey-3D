@@ -18,7 +18,7 @@
 import { Store } from '../core/Store.ts';
 import { steer, type MalletLimits } from '../physics/mallet.ts';
 import { PLAYER_MALLET, STEP } from '../physics/params.ts';
-import { createWorld, step, type PhysicsEvent, type World } from '../physics/puck.ts';
+import { createWorld, step, type Body, type PhysicsEvent, type World } from '../physics/puck.ts';
 import {
   concede,
   FETCH_DELAY,
@@ -70,6 +70,25 @@ export interface Driver {
   target(match: Match, seat: Seat, dt: number): Point | null;
 }
 
+/**
+ * Who makes the calls (src/game/HockeyPort.ts, online). On one device this device makes them all.
+ * Online each player's device calls the goals into their own goal and the fouls on themselves,
+ * while the puck is theirs, and serves for them; the other device is told, and waits until it is.
+ */
+export interface Referee {
+  /** Whether this device calls a goal into `seat`'s goal, or a foul on `seat`. */
+  calls(seat: Seat): boolean;
+  /** Whether this device serves for `seat` once the pause before a serve is over. */
+  serves(seat: Seat): boolean;
+  /** Hears everything that happens, after the match has. */
+  heard(event: MatchEvent): void;
+  /** After each step of play. */
+  stepped(): void;
+}
+
+/** How quickly a drawing correction fades (online, the puck as the other player's device has it). */
+const CORRECTION_SECONDS = 0.07;
+
 /** Steps played in one frame at most; a frame later than that drops the rest (a stalled tab). */
 const MAX_STEPS_PER_FRAME = 24;
 
@@ -95,6 +114,13 @@ export class Match {
   held = false;
   /** Called with everything that happens. */
   onEvent: (event: MatchEvent) => void = () => {};
+  /** Online, who makes which calls; null on one device. A new match clears it. */
+  referee: Referee | null = null;
+  /**
+   * Where the puck is drawn from where it is: online, a correction from the other device, faded
+   * away over a moment rather than shown as a jump.
+   */
+  readonly drawOffset = { x: 0, y: 0 };
   /** Seconds of play so far. */
   time = 0;
   /** The time owed to the simulation, less than a step. */
@@ -125,6 +151,10 @@ export class Match {
   /** Starts a match with these terms: the mallets at home, the puck on the server's spot. */
   start(setup: MatchSetup = this.setup): void {
     this.setup = setup;
+    this.referee = null;
+    this.world.solid[0] = true;
+    this.world.solid[1] = true;
+    this.drawOffset.x = this.drawOffset.y = 0;
     this.state.set(newMatch(setup.target, setup.firstServe));
     this.zones = [malletArea(this.spec, 0, this.reach), malletArea(this.spec, 1, this.reach)];
     this.halves = [malletArea(this.spec, 0), malletArea(this.spec, 1)];
@@ -171,6 +201,9 @@ export class Match {
 
   /** Plays the time that passed, in fixed steps. Returns whether anything may have moved. */
   update(dt: number): boolean {
+    const fade = Math.exp(-dt / CORRECTION_SECONDS);
+    this.drawOffset.x *= fade;
+    this.drawOffset.y *= fade;
     if (this.paused || this.held) return false;
     this.owed += dt;
     let steps = 0;
@@ -201,26 +234,40 @@ export class Match {
     this.time += STEP;
     if (this.waiting) {
       this.wait -= STEP;
-      if (this.wait <= 0) this.serve();
+      // Online, the server's own device serves; this one waits to be told.
+      if (this.wait <= 0 && (this.referee?.serves(this.current.server) ?? true)) this.serve();
     } else if (this.current.phase === 'play') {
       this.watchPossession();
     }
+    this.referee?.stepped();
+  }
+
+  private emit(event: MatchEvent): void {
+    this.onEvent(event);
+    this.referee?.heard(event);
   }
 
   private apply(event: PhysicsEvent): void {
     if (event.kind !== 'goal') {
-      this.onEvent(event);
+      this.emit(event);
       return;
     }
+    // A goal this device does not call waits in the slot until it is called, or the puck is put
+    // back where the other device has it.
+    if (this.referee && !this.referee.calls(event.seat)) return;
+    this.emit(event);
+    this.score(event.seat);
+  }
+
+  /** A goal into `into`'s goal counts. */
+  private score(into: Seat): void {
     const before = this.current;
-    const after = scoreGoal(before, event.seat);
-    this.onEvent(event);
+    const after = scoreGoal(before, into);
     if (after === before) return;
     this.state.set(after);
     this.wait = GOAL_PAUSE;
-    const scorer = other(event.seat);
-    this.onEvent({ kind: 'scored', scorer });
-    if (after.winner !== null) this.onEvent({ kind: 'won', winner: after.winner });
+    this.emit({ kind: 'scored', scorer: other(into) });
+    if (after.winner !== null) this.emit({ kind: 'won', winner: after.winner });
   }
 
   /**
@@ -257,11 +304,17 @@ export class Match {
     }
     this.possession.time += STEP;
     if (this.possession.time < POSSESSION_LIMIT) return;
-    this.state.set(possessionFoul(this.current, half));
+    // Online, the holder's own device calls it.
+    if (this.referee && !this.referee.calls(half)) return;
+    this.foul(half);
+  }
+
+  private foul(holder: Seat): void {
+    this.state.set(possessionFoul(this.current, holder));
     this.world.live = false;
     Object.assign(this.world.puck, { vx: 0, vy: 0 });
     this.wait = FOUL_PAUSE;
-    this.onEvent({ kind: 'foul', holder: half });
+    this.emit({ kind: 'foul', holder });
   }
 
   /** The pause is over: the puck goes down on the server's spot, and play goes on. */
@@ -269,7 +322,105 @@ export class Match {
     const next = serve(this.current);
     this.state.set(next);
     this.placePuck(next.server);
-    this.onEvent({ kind: 'served', seat: next.server });
+    this.emit({ kind: 'served', seat: next.server });
+  }
+
+  // --- online: what the other player's device called ------------------------------------------
+
+  /** The other device called a goal into `into`'s goal: the puck goes into the slot, and counts. */
+  takeGoal(into: Seat): boolean {
+    if (this.current.phase !== 'play') return false;
+    const { world, spec } = this;
+    if (world.goal !== into) {
+      // Into the slot, where the puck crossed the line on this device or in the mouth's middle.
+      const r = spec.puck.radius;
+      const x = Math.min(
+        Math.max(world.puck.x, spec.W / 2 - spec.goalWidth / 4),
+        spec.W / 2 + spec.goalWidth / 4,
+      );
+      Object.assign(world.puck, { x, y: into === 0 ? -r * 1.2 : spec.L + r * 1.2, vx: 0, vy: 0 });
+      this.previous.puck = { x: world.puck.x, y: world.puck.y };
+    }
+    world.live = false;
+    world.goal = into;
+    this.emit({ kind: 'goal', seat: into });
+    this.score(into);
+    return true;
+  }
+
+  /** The other device called a foul on `holder`. */
+  takeFoul(holder: Seat): boolean {
+    if (this.current.phase !== 'play') return false;
+    this.foul(holder);
+    return true;
+  }
+
+  /** The other device served: the puck goes down on the server's spot. */
+  takeServe(): boolean {
+    if (!this.waiting) return false;
+    this.serve();
+    return true;
+  }
+
+  /** Puts the puck where the other device has it, in play. */
+  takePuck(puck: Body): void {
+    const { world } = this;
+    Object.assign(world.puck, { x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy });
+    world.live = true;
+    world.goal = null;
+  }
+
+  /**
+   * Plays the puck again from where the other device had it, steps ago, to now: the seat's mallet
+   * moves along the path it took over those steps (`path[0]` where it was, then where each step
+   * left it), so a hit this device made meanwhile still counts. Only the puck, the walls and that
+   * mallet are played (the other mallet cannot reach a puck in this half), and of what happens
+   * only a goal is called; the step's sounds were heard, or are lost. `after` hears each step, with
+   * the steps still to play.
+   */
+  replay(seat: Seat, puck: Body, path: readonly Point[], after?: (left: number) => void): void {
+    const { world } = this;
+    const drawn = this.puckAt();
+    this.takePuck(puck);
+    const mine = world.mallets[seat];
+    const start = path[0];
+    if (start) Object.assign(mine, { x: start.x, y: start.y });
+    const still = world.mallets[other(seat)];
+    const stay = { x: still.x, y: still.y };
+    for (let i = 1; i < path.length; i++) {
+      const to: [Point, Point] = seat === 0 ? [path[i]!, stay] : [stay, path[i]!];
+      for (const event of step(world, to)) if (event.kind === 'goal') this.apply(event);
+      after?.(path.length - 1 - i);
+    }
+    // Drawn from here on, with the jump faded away.
+    this.previous.puck = { x: world.puck.x, y: world.puck.y };
+    this.previous.mallets[seat] = { x: mine.x, y: mine.y };
+    this.drawOffset.x += drawn.x - world.puck.x;
+    this.drawOffset.y += drawn.y - world.puck.y;
+  }
+
+  /**
+   * Takes a match as the other device has it (online, the host's, after a reconnection): its score
+   * and phase, and the puck where it is, or out of play before a serve.
+   */
+  adopt(state: MatchState, puck: Body | null): void {
+    const { world, spec } = this;
+    this.state.set(state);
+    this.stranded = 0;
+    this.fetching = null;
+    world.areas = [this.zones[0], this.zones[1]];
+    if (puck && state.phase === 'play') {
+      this.takePuck(puck);
+      this.possession = { seat: halfOf(spec, puck.y), time: 0 };
+    } else {
+      const spot = serveSpot(spec, state.server, this.reach);
+      Object.assign(world.puck, { x: spot.x, y: spot.y, vx: 0, vy: 0 });
+      world.live = false;
+      world.goal = null;
+      this.wait = state.phase === 'over' ? 0 : FOUL_PAUSE;
+    }
+    this.previous.puck = { x: world.puck.x, y: world.puck.y };
+    this.drawOffset.x = this.drawOffset.y = 0;
   }
 
   private placePuck(seat: Seat): void {
@@ -286,7 +437,7 @@ export class Match {
     const next = concede(this.current, seat);
     if (next === this.current) return;
     this.state.set(next);
-    if (next.winner !== null) this.onEvent({ kind: 'won', winner: next.winner });
+    if (next.winner !== null) this.emit({ kind: 'won', winner: next.winner });
   }
 
   private remember(): void {
@@ -302,7 +453,10 @@ export class Match {
   puckAt(alpha = this.alpha): Point {
     const from = this.previous.puck;
     const to = this.world.puck;
-    return { x: from.x + (to.x - from.x) * alpha, y: from.y + (to.y - from.y) * alpha };
+    return {
+      x: from.x + (to.x - from.x) * alpha + this.drawOffset.x,
+      y: from.y + (to.y - from.y) * alpha + this.drawOffset.y,
+    };
   }
 
   /** Where to draw a mallet now. */

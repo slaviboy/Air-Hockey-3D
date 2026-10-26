@@ -351,8 +351,16 @@ export class UiRoot {
   }
 
   private serveText(names: readonly [string, string], seat: Seat): string {
-    const mode = this.app.match.setup.mode;
-    return mode === 'computer' && seat === 0 ? 'You serve' : `${names[seat]} serves`;
+    return seat === this.me() ? 'You serve' : `${names[seat]} serves`;
+  }
+
+  /**
+   * The seat of the one player at this device (against the computer, or online), whom the notes
+   * call "you"; null with two players on one device.
+   */
+  private me(): Seat | null {
+    const local = this.app.localSeats;
+    return this.app.match.setup.mode !== 'local' && local.length === 1 ? local[0]! : null;
   }
 
   // --- for online play (src/ui/online) ---------------------------------------------------------
@@ -478,10 +486,7 @@ export class UiRoot {
     const local = this.app.localSeats;
     if (event.kind === 'scored') {
       const kind = local.length === 2 ? 'ours' : local.includes(event.scorer) ? 'ours' : 'theirs';
-      const who =
-        this.app.match.setup.mode === 'computer' && event.scorer === 0
-          ? 'You score'
-          : `${names[event.scorer]} scores`;
+      const who = event.scorer === this.me() ? 'You score' : `${names[event.scorer]} scores`;
       this.banner.show(
         state.phase === 'over' ? 'Match!' : 'Goal!',
         `${who} · ${state.score[0]}–${state.score[1]}`,
@@ -493,7 +498,8 @@ export class UiRoot {
         'foul',
       );
     } else if (event.kind === 'won') {
-      setTimeout(() => void this.showResult(), this.conceded === null ? RESULT_DELAY_MS : 0);
+      const given = this.givenUp(state) !== null;
+      setTimeout(() => void this.showResult(), given ? 0 : RESULT_DELAY_MS);
     }
     this.render();
   }
@@ -506,20 +512,31 @@ export class UiRoot {
     const names = match.setup.names;
     const computer = match.setup.mode === 'computer';
     const title =
-      computer && state.winner === 0
+      state.winner === this.me()
         ? 'You win the match'
         : computer
           ? 'The computer wins the match'
           : `${names[state.winner]} wins the match`;
+    const given = this.givenUp(state);
     const detail =
-      this.conceded !== null
-        ? `${names[this.conceded]} gave up the match.`
+      given !== null
+        ? `${given === this.me() ? 'You' : names[given]} gave up the match.`
         : `First to ${state.target}, ${state.score[state.winner]}–${state.score[other(state.winner)]}.`;
     this.banner.hide();
     const choice = await resultDialog({ title, detail, names, score: state.score });
     if (choice === 'rematch') await this.rematch();
     else if (choice === 'menu') await this.menu();
     this.render();
+  }
+
+  /**
+   * Who gave up a match that is over, or null when it was won on goals: conceded on this device,
+   * or (online) resigned, left or forfeited, short of the target.
+   */
+  private givenUp(state: MatchState): Seat | null {
+    if (state.winner === null) return null;
+    if (this.conceded !== null) return this.conceded;
+    return state.score[state.winner] < state.target ? other(state.winner) : null;
   }
 
   /** After the match: the same terms again, the loser serving first (online, both must ask). */
@@ -946,7 +963,7 @@ export class UiRoot {
     if (held) return held;
     if (!this.started) return 'Choose a game to begin';
     if (state.winner !== null) {
-      return match.setup.mode === 'computer' && state.winner === 0
+      return state.winner === this.me()
         ? 'You win the match'
         : `${names[state.winner]} wins the match`;
     }
@@ -954,7 +971,7 @@ export class UiRoot {
     if (state.phase === 'goal' && state.conceded !== null) {
       return `Goal for ${names[other(state.conceded)]} · ${names[state.server]} serves next`;
     }
-    if (state.phase === 'foul') return `${names[state.server]} serves`;
+    if (state.phase === 'foul') return this.serveText(names, state.server);
     if (this.serving(state)) return this.serveText(names, state.server);
     if (match.fetching !== null) {
       const seat = match.fetching;

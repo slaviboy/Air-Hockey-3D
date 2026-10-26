@@ -287,6 +287,15 @@
     color: var(--m-danger);
   }
 
+  /* Hanging up: red, as on a phone. */
+  .m-media-btn.hang-up {
+    color: var(--m-danger);
+  }
+
+  .m-media-btn.hang-up:hover {
+    background: rgba(229, 115, 107, 0.18);
+  }
+
   .card-media-silent {
     display: grid;
     place-items: center;

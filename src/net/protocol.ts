@@ -12,15 +12,15 @@
 // What two players' browsers say to each other in an online game, and the invitation link that
 // brings them together. This file holds the session's envelope, the messages any game needs (who
 // is there, the host's terms, giving up, a rematch, leaving, media); the game adds its own through
-// a codec (src/game/gameMessages.ts for 8-ball). Everything that arrives from the other player is
-// untrusted: parseMessage accepts only the exact shapes below, or the codec's, and drops anything
-// else, so a modified client can never push an unexpected field or type into the game.
+// a codec (src/game/hockeyMessages.ts for air hockey). Everything that arrives from the other
+// player is untrusted: parseMessage accepts only the exact shapes below, or the codec's, and drops
+// anything else, so a modified client can never push an unexpected field or type into the game.
 
 export const PROTOCOL_VERSION = 1;
 /** No message is longer; anything bigger is dropped before it is read. */
 export const MAX_MESSAGE_BYTES = 4096;
 export const MAX_NAME_LENGTH = 24;
-/** A counter no real session comes near (shots, rejoins): anything beyond it is nonsense. */
+/** A counter no real session comes near (goals, passes, rejoins): anything beyond it is nonsense. */
 export const MAX_COUNT = 1_000_000;
 
 /** Anything sent over the link: a plain object with a type. */
@@ -42,7 +42,7 @@ export type SessionMessage<S> =
     }
   /** The host's terms for the match, and the guest's token for rejoining. */
   | { readonly t: 'setup'; readonly token: string; readonly terms: S }
-  /** After shot `n` the sender's table differs from the one the other side reported. */
+  /** At point `n` (a goal's number) the sender's table differs from the one the other side reported. */
   | { readonly t: 'desync'; readonly n: number }
   /** The sender gives up the match. */
   | { readonly t: 'resign' }

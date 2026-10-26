@@ -12,9 +12,10 @@
 // Video and voice on a player's card, kept out of the table's way: the picture fills the card's
 // round avatar (a 4:3 window it is cropped to, in a taller top bar, on a phone held upright; on a
 // large card, its top), and the switches sit beside the name. The player's own card shows their
-// camera (mirrored, like a mirror) and the microphone and camera switches; the other player's card
-// shows their camera while pictures arrive, and a switch to mute them on this device. Videos never
-// play sound: the other player's voice comes from one audio element kept by the online play.
+// camera (mirrored, like a mirror), the microphone and camera switches and, while a call is on, a
+// button to hang up; the other player's card shows their camera while pictures arrive, and a switch
+// to mute them on this device. Videos never play sound: the other player's voice comes from one
+// audio element kept by the online play.
 
 import type { Seat } from '../rules/types.ts';
 import type { DeviceState } from '../net/OnlineMedia.ts';
@@ -32,12 +33,15 @@ export interface MediaView {
   /** Sound is actually arriving from the other player. */
   readonly friendSound: boolean;
   readonly speakerMuted: boolean;
+  /** This player hung up: the other player is neither shown nor heard. */
+  readonly hungUp: boolean;
 }
 
 export interface MediaCommands {
   toggleMic(): void;
   toggleCam(): void;
   toggleSpeaker(): void;
+  hangUp(): void;
 }
 
 type MakeButton = (icon: string, label: string, onClick: () => void) => HTMLButtonElement;
@@ -64,6 +68,7 @@ export class CardMedia {
   private readonly mic: HTMLButtonElement;
   private readonly cam: HTMLButtonElement;
   private readonly speaker: HTMLButtonElement;
+  private readonly hangUp: HTMLButtonElement;
   private readonly silent: HTMLElement;
   private shown: MediaStream | null = null;
 
@@ -82,12 +87,17 @@ export class CardMedia {
     this.mic = makeButton(LINE_ICONS.micOff, DEVICE_LABEL.mic.off, () => commands.toggleMic());
     this.cam = makeButton(LINE_ICONS.cameraOff, DEVICE_LABEL.cam.off, () => commands.toggleCam());
     this.speaker = makeButton(LINE_ICONS.speaker, 'Mute', () => commands.toggleSpeaker());
+    this.hangUp = makeButton(LINE_ICONS.hangUp, 'Hang up the call', () => commands.hangUp());
+    this.hangUp.classList.add('hang-up');
+    this.hangUp.dataset.tip = 'Hang up the call (the match goes on)';
     this.silent = document.createElement('span');
     this.silent.className = 'card-media-silent';
     this.silent.innerHTML = LINE_ICONS.micOff;
     this.silent.setAttribute('role', 'img');
-    for (const b of [this.mic, this.cam, this.speaker]) b.classList.add('card-media-btn');
-    this.controls.append(this.mic, this.cam, this.speaker, this.silent);
+    for (const b of [this.mic, this.cam, this.speaker, this.hangUp]) {
+      b.classList.add('card-media-btn');
+    }
+    this.controls.append(this.mic, this.cam, this.hangUp, this.speaker, this.silent);
   }
 
   /** Draws the card for `seat`; returns whether a video shows. */
@@ -97,8 +107,14 @@ export class CardMedia {
     const self = view.me === seat;
     this.mic.hidden = !self;
     this.cam.hidden = !self;
-    this.speaker.hidden = self || !view.friendSound;
-    this.silent.hidden = self || view.friendSound;
+    // A call is on while either side's camera or microphone is, and this player has not hung up.
+    const calling =
+      view.mic === 'on' ||
+      view.cam === 'on' ||
+      (!view.hungUp && (view.friendSound || view.friendVideo !== null));
+    this.hangUp.hidden = !self || !calling;
+    this.speaker.hidden = self || view.hungUp || !view.friendSound;
+    this.silent.hidden = self || view.hungUp || view.friendSound;
     if (self) {
       this.device(this.mic, 'mic', view.mic, LINE_ICONS.mic, LINE_ICONS.micOff);
       this.device(this.cam, 'cam', view.cam, LINE_ICONS.camera, LINE_ICONS.cameraOff);

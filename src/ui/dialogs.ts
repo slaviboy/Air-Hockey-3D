@@ -336,9 +336,10 @@ export function rulesDialog(): Promise<void> {
         <li><strong>Your zone.</strong> Your mallet stays in your own zone, shown in green: your
           whole half up to the centre line in the standard game, or less when the match is set up
           so (the same for both players). The puck goes anywhere: off the rails, the corners and
-          the posts of the goals. When the puck comes to rest where neither mallet may go, the
-          player whose half it lies in may take their mallet out of their zone to strike it, as
-          at a real table; once it is struck, the zone holds again.</li>
+          the posts of the goals. When the puck comes to rest, or slides from side to side, where
+          neither mallet may go, the player whose half it lies in may take their mallet out of
+          their zone to strike it, as at a real table; once it is struck, the zone holds
+          again.</li>
         <li><strong>A goal</strong> counts once the whole puck has gone into the slot. The player
           scored on serves next, from the middle of their half.</li>
         <li><strong>Keeping the puck.</strong> A player may keep the puck in their half for
