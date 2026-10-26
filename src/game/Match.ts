@@ -392,11 +392,13 @@ export class Match {
       for (const event of step(world, to)) if (event.kind === 'goal') this.apply(event);
       after?.(path.length - 1 - i);
     }
-    // Drawn from here on, with the jump faded away.
+    // Drawn from here on, with the jump faded away. `drawn` holds the offset still fading, so the
+    // offset is set from it, not added to: added, each report doubled it, and a puck corrected
+    // thirty times a second was soon drawn metres off the table, then out of sight.
     this.previous.puck = { x: world.puck.x, y: world.puck.y };
     this.previous.mallets[seat] = { x: mine.x, y: mine.y };
-    this.drawOffset.x += drawn.x - world.puck.x;
-    this.drawOffset.y += drawn.y - world.puck.y;
+    this.drawOffset.x = drawn.x - world.puck.x;
+    this.drawOffset.y = drawn.y - world.puck.y;
   }
 
   /**

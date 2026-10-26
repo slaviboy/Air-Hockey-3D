@@ -11,7 +11,8 @@
 
 // A match in time: a puck into a goal scores once, the mallets go home and the player scored on
 // is served the puck; the match ends at its target; the same time played in any frames gives the
-// same table; pausing stops time; the 7-second rule gives the puck away.
+// same table; pausing stops time; the 7-second rule gives the puck away; a puck put right from
+// the other device is drawn where it was, the jump fading.
 
 import { describe, expect, it } from 'vitest';
 import { Match, type MatchEvent, type MatchSetup } from '../../../src/game/Match.ts';
@@ -130,5 +131,26 @@ describe('a match in time', () => {
     expect(m.alpha).toBeCloseTo(0.5, 9);
     expect(drawn.x).toBeGreaterThan(m.previous.puck.x);
     expect(drawn.x).toBeLessThan(m.world.puck.x);
+  });
+
+  it('draws a puck put right from the other device where it was, the jump fading on the table', () => {
+    const { m } = match();
+    shoot(m, W / 2, L / 4, 0, 0);
+    m.update(STEP * 1.5);
+    const before = m.puckAt();
+    // Reports, each with the puck somewhere else, faster than the jumps fade.
+    for (const x of [0.2, 0.9, 0.3, 0.8, 0.25, 0.85]) {
+      m.replay(0, { x, y: L / 4, vx: 0, vy: 0 }, []);
+      const drawn = m.puckAt();
+      expect(Math.hypot(drawn.x - before.x, drawn.y - before.y)).toBeLessThan(1e-9);
+    }
+    // A moment on, it is drawn where it is, never past the rails on the way.
+    for (let i = 0; i < 30; i++) {
+      m.update(1 / 60);
+      const drawn = m.puckAt();
+      expect(drawn.x).toBeGreaterThan(0);
+      expect(drawn.x).toBeLessThan(W);
+    }
+    expect(Math.hypot(m.drawOffset.x, m.drawOffset.y)).toBeLessThan(0.001);
   });
 });
