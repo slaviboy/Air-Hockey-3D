@@ -11,15 +11,15 @@
 
 // The soft round shadow under a piece standing on the surface (Pool's under its balls). It grounds
 // the piece at every quality: the lit surface glows, so the lamps' own shadows barely show on it,
-// and in the low quality the lights cast none at all. It reaches a little past the piece's edge,
-// darkest just under it, as an overhead lamp's would.
+// and in the low quality the lights cast none at all. It is the piece's own round shape with a
+// short soft edge, as a lamp above the table casts it; the pieces set it a little to one side.
 
 import { CanvasTexture } from 'three';
 
 /** How far the shadow reaches, as a multiple of the piece's radius. */
-export const SHADOW_SPREAD = 2;
+export const SHADOW_SPREAD = 1.15;
 
-/** A soft round shadow: darkest under the piece, fading out a little beyond its edge. */
+/** A round shadow the size of the piece, with a short soft edge. */
 export function contactShadowTexture(): CanvasTexture {
   const size = 128;
   const canvas = document.createElement('canvas');
@@ -27,13 +27,11 @@ export function contactShadowTexture(): CanvasTexture {
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
   const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  // The piece's edge is at 1 / SHADOW_SPREAD of the way out: half way.
-  gradient.addColorStop(0, 'rgba(0,0,0,0.85)');
-  gradient.addColorStop(0.45, 'rgba(0,0,0,0.8)');
-  gradient.addColorStop(0.52, 'rgba(0,0,0,0.6)');
-  gradient.addColorStop(0.64, 'rgba(0,0,0,0.34)');
-  gradient.addColorStop(0.78, 'rgba(0,0,0,0.13)');
-  gradient.addColorStop(0.9, 'rgba(0,0,0,0.035)');
+  // The piece's edge is at 1 / SHADOW_SPREAD of the way out (about 0.87).
+  gradient.addColorStop(0, 'rgba(0,0,0,0.5)');
+  gradient.addColorStop(0.8, 'rgba(0,0,0,0.48)');
+  gradient.addColorStop(0.88, 'rgba(0,0,0,0.3)');
+  gradient.addColorStop(0.95, 'rgba(0,0,0,0.08)');
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
