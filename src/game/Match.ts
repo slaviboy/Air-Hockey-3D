@@ -224,8 +224,8 @@ export class Match {
   }
 
   /**
-   * A puck at rest where neither mallet may reach (between short zones) is fetched, as a player
-   * at a real table would: after a moment, the player whose half it lies in may take their mallet
+   * A puck at rest where neither mallet may reach (between short zones), or sliding there from
+   * side to side, is fetched, as a player at a real table would: after a moment, the player whose half it lies in may take their mallet
    * up to the centre line, until the puck is struck or within reach again. The mallet then glides
    * back into its zone (the step moves it there no faster than a hand).
    */
@@ -234,7 +234,8 @@ export class Match {
     const p = world.puck;
     const touch = spec.mallet.radius + spec.puck.radius;
     const beyond = p.y > this.zones[0].y1 + touch && p.y < this.zones[1].y0 - touch;
-    const slow = p.vx * p.vx + p.vy * p.vy < FETCH_SPEED * FETCH_SPEED;
+    // Slow to come into either zone: at rest, or sliding along the table rather than up it.
+    const slow = Math.abs(p.vy) < FETCH_SPEED;
     // Struck, or come within reach: the zones hold again at once.
     const still = world.live && this.current.phase === 'play' && beyond && slow;
     this.stranded = still ? this.stranded + STEP : 0;

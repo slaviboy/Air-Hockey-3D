@@ -573,7 +573,9 @@ function slide(world: World, dt: number): void {
   const near = world.areas[0].y1 + touch - 0.006;
   const far = world.areas[1].y0 - touch + 0.006;
   const speed = Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy);
-  if (speed < BAND_DRIFT_SPEED && puck.y > near && puck.y < far) {
+  // By its speed across the table, not its speed: a puck sliding along the centre line, from side
+  // rail to side rail, would stay out of reach as long as one at rest.
+  if (Math.abs(puck.vy) < BAND_DRIFT_SPEED && puck.y > near && puck.y < far) {
     // Toward the nearer zone (at the centre line, toward the half it is in).
     const middle = (near + far) / 2;
     puck.vy += (puck.y < middle ? -1 : 1) * BAND_DRIFT_ACCEL * dt;

@@ -114,6 +114,33 @@ describe('the mallets’ zones', () => {
     }
   });
 
+  it('never leave a puck sliding along the centre line out of everyone’s reach', () => {
+    const touch = M + R;
+    for (const reach of REACH_IDS) {
+      for (const [vx, dy] of [
+        [0.5, 0.001],
+        [1.5, 0.0005],
+        [0.2, 0],
+        [-0.8, -0.001],
+      ] as const) {
+        const match = game(reach);
+        // Both players stay at home, by their own goals.
+        match.targets[0] = { x: 0.1, y: 0.1 };
+        match.targets[1] = { x: 0.1, y: L - 0.1 };
+        Object.assign(match.world.puck, { x: W / 2, y: L / 2 + dy, vx, vy: 0 });
+        let reached = false;
+        for (let t = 0; t < 0.7 && !reached; t += STEP) {
+          match.stepOnce();
+          const p = match.world.puck;
+          // Within reach of a mallet, in its zone or in the half it may fetch from.
+          reached =
+            p.y <= match.world.areas[0].y1 + touch || p.y >= match.world.areas[1].y0 - touch;
+        }
+        expect(reached, `${reach}, sliding at ${vx} m/s`).toBe(true);
+      }
+    }
+  });
+
   it('leave the computer playing in the smallest zone', () => {
     const match = game('quarter');
     match.drivers[1] = new ComputerPlayer(difficulty('hard'), createRng(3));

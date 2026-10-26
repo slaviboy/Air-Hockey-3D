@@ -29,8 +29,8 @@ export const FOUL_PAUSE = 1.2;
 export const POSSESSION_LIMIT = 7;
 
 /**
- * A puck slower than this (m/s) where neither mallet may reach, for longer than FETCH_DELAY
- * seconds, may be fetched: the player whose half it lies in may take their mallet out of their
+ * A puck slower than this (m/s) up or down the table, where neither mallet may reach, for longer
+ * than FETCH_DELAY seconds (at rest, or sliding from side to side), may be fetched: the player whose half it lies in may take their mallet out of their
  * zone, up to the centre line, until it is struck or within reach again.
  */
 export const FETCH_SPEED = 0.25;
