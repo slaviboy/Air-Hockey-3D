@@ -79,6 +79,8 @@ export interface World {
    * simulates the puck (the other cannot reach its half).
    */
   readonly solid: [boolean, boolean];
+  /** Whether the puck is in play; out of it (in a goal, or taken up after a foul) it rests. */
+  live: boolean;
   /** The goal the puck has gone into, once it has; it then rests in the slot. */
   goal: Seat | null;
 }
@@ -93,6 +95,7 @@ export function createWorld(spec: TableSpec): World {
     puck: body(spec.W / 2, spec.L / 2),
     mallets: [body(spec.W / 2, spec.mallet.radius), body(spec.W / 2, spec.L - spec.mallet.radius)],
     solid: [true, true],
+    live: true,
     goal: null,
   };
 }
@@ -128,7 +131,7 @@ export function step(world: World, asked: readonly [Point, Point], dt = STEP): P
     mallets[seat].vx = (targets[seat].x - mallets[seat].x) / dt;
     mallets[seat].vy = (targets[seat].y - mallets[seat].y) / dt;
   }
-  if (world.goal !== null) {
+  if (!world.live) {
     place(world, targets);
     return events;
   }
@@ -156,6 +159,7 @@ export function step(world: World, asked: readonly [Point, Point], dt = STEP): P
   const goal = goalReached(world.spec, puck.y);
   if (goal !== null) {
     world.goal = goal;
+    world.live = false;
     events.push({ kind: 'goal', seat: goal });
   }
   return events;
@@ -602,7 +606,7 @@ export function coast(world: World, seconds: number, out?: (puck: Body, t: numbe
     { x: copy.mallets[1].x, y: copy.mallets[1].y },
   ];
   let t = 0;
-  while (t < seconds - 1e-12 && copy.goal === null) {
+  while (t < seconds - 1e-12 && copy.live) {
     const dt = Math.min(STEP, seconds - t);
     step(copy, still, dt);
     t += dt;

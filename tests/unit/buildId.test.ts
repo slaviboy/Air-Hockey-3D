@@ -35,9 +35,10 @@ describe('build id', () => {
   it('covers the simulation, the rules, the match and the protocol, and nothing else', () => {
     const paths = sharedFiles('.').map((f) => f.path);
     for (const path of [
-      'src/physics/dmath.ts',
-      'src/table/frame.ts',
-      'src/rules/types.ts',
+      'src/physics/puck.ts',
+      'src/table/geometry.ts',
+      'src/rules/match.ts',
+      'src/game/Match.ts',
       'src/net/protocol.ts',
     ]) {
       expect(paths).toContain(path);
