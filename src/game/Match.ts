@@ -54,8 +54,8 @@ export type MatchEvent =
 
 /** Something that moves a mallet each step instead of a pointer: the computer, or the keys. */
 export interface Driver {
-  /** Where the seat's mallet should go this step. */
-  target(match: Match, seat: Seat, dt: number): Point;
+  /** Where the seat's mallet should go this step, or null to leave it to the pointer. */
+  target(match: Match, seat: Seat, dt: number): Point | null;
 }
 
 /** Steps played in one frame at most; a frame later than that drops the rest (a stalled tab). */

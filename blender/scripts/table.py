@@ -53,7 +53,7 @@ CAP_TOP = 0.26
 CAP_BOTTOM = 0.07
 # The goal housings and their chutes down the end faces.
 HOUSING_WIDTH = 0.42
-HOUSING_HEIGHT = 0.05
+HOUSING_HEIGHT = 0.042
 HOUSING_OUT = 0.075
 CHUTE_WIDTH = 0.26
 CHUTE_BOTTOM = -0.3
@@ -342,7 +342,7 @@ def build(collection_name="table"):
     # down the end face to the puck return, whose opening is dark.
     returns = []
     for seat, sy in ((0, -1), (1, 1)):
-        y_in = sy * (L / 2 + 0.004)
+        y_in = sy * (L / 2 + 0.03)
         y_out = sy * (L / 2 + rw + HOUSING_OUT)
         box = bevelled_box(f"housing-{seat}", -HOUSING_WIDTH / 2, min(y_in, y_out), top - 0.004,
                            HOUSING_WIDTH / 2, max(y_in, y_out), top + HOUSING_HEIGHT, 0.006)
